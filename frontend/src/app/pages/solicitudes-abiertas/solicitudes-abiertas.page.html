@@ -1,0 +1,294 @@
+<app-header titulo="Solicitudes Abiertas"></app-header>
+
+<ion-content>
+  <!-- Refresher para actualizar -->
+  <ion-refresher slot="fixed" (ionRefresh)="refrescar($event)">
+    <ion-refresher-content
+      pullingIcon="chevron-down-outline"
+      pullingText="Desliza para actualizar"
+      refreshingSpinner="crescent"
+      refreshingText="Actualizando...">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <div class="page-container">
+    <!-- Navegación lateral -->
+    <div class="navigation-sidebar">
+      <h3>Navegación</h3>
+      <div class="nav-buttons">
+        <ion-button 
+          expand="block" 
+          fill="outline" 
+          color="primary"
+          class="nav-button current"
+          disabled>
+          <ion-icon name="folder-open-outline" slot="start"></ion-icon>
+          Solicitudes Abiertas
+        </ion-button>
+
+        <ion-button 
+          expand="block" 
+          fill="outline" 
+          color="success"
+          class="nav-button"
+          (click)="irASolicitudesCerradas()">
+          <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+          Solicitudes Cerradas
+        </ion-button>
+
+        <ion-button 
+          expand="block" 
+          fill="outline" 
+          color="warning"
+          class="nav-button"
+          (click)="irASolicitudesPendientes()">
+          <ion-icon name="time-outline" slot="start"></ion-icon>
+          Solicitudes Pendientes
+        </ion-button>
+
+        <ion-button 
+          expand="block" 
+          fill="outline" 
+          color="secondary"
+          class="nav-button"
+          (click)="irAMetricas()">
+          <ion-icon name="analytics-outline" slot="start"></ion-icon>
+          Métricas
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- Contenido principal -->
+    <div class="main-content">
+      <!-- Barra de búsqueda y filtros -->
+      <div class="search-filter-section">
+        <!-- Título de la sección -->
+        <div class="section-header">
+          <h2>Solicitudes Abiertas</h2>
+          <p>Gestiona todas las solicitudes que requieren atención</p>
+        </div>
+
+        <!-- Barra de búsqueda -->
+        <ion-searchbar 
+          placeholder="Buscar por asunto, número o descripción..."
+          [(ngModel)]="terminoBusqueda"
+          (ionInput)="buscarTickets($event)"
+          showClearButton="focus">
+        </ion-searchbar>
+
+        <!-- Filtros -->
+        <div class="filters-row">
+          <ion-item class="filter-item">
+            <ion-label>Estado</ion-label>
+            <ion-select 
+              placeholder="Todos"
+              [(ngModel)]="filtroEstado"
+              (ionChange)="cambiarFiltroEstado($event)"
+              interface="popover">
+              <ion-select-option value="">Todos</ion-select-option>
+              <ion-select-option 
+                *ngFor="let estado of estados" 
+                [value]="estado.id">
+                {{ estado.nombre }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item class="filter-item">
+            <ion-label>Prioridad</ion-label>
+            <ion-select 
+              placeholder="Todas"
+              [(ngModel)]="filtroPrioridad"
+              (ionChange)="cambiarFiltroPrioridad($event)"
+              interface="popover">
+              <ion-select-option value="">Todas</ion-select-option>
+              <ion-select-option 
+                *ngFor="let prioridad of prioridades" 
+                [value]="prioridad.id">
+                {{ prioridad.nombre }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item class="filter-item">
+            <ion-label>Departamento</ion-label>
+            <ion-select 
+              placeholder="Todos"
+              [(ngModel)]="filtroDepartamento"
+              (ionChange)="cambiarFiltroDepartamento($event)"
+              interface="popover">
+              <ion-select-option value="">Todos</ion-select-option>
+              <ion-select-option 
+                *ngFor="let depto of departamentos" 
+                [value]="depto.id">
+                {{ depto.nombre }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-button 
+            fill="clear" 
+            size="small"
+            (click)="limpiarFiltros()"
+            title="Limpiar filtros">
+            <ion-icon name="refresh-outline"></ion-icon>
+          </ion-button>
+        </div>
+
+        <!-- Contador de resultados -->
+        <div *ngIf="!cargando && tickets.length > 0" class="results-info">
+          <p>
+            Mostrando {{ ticketsFiltrados.length }} de {{ tickets.length }} solicitudes abiertas
+            <span *ngIf="hayTicketsVencidos" class="overdue-warning">
+              - {{ cantidadTicketsVencidos }} vencidas
+            </span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Lista de solicitudes -->
+      <div class="tickets-container">
+        <!-- Estado de carga -->
+        <div *ngIf="cargando" class="loading-state">
+          <ion-grid>
+            <ion-row>
+              <ion-col size="12" size-md="6" size-lg="4" *ngFor="let item of [1,2,3,4,5,6]">
+                <ion-skeleton-text animated style="width: 100%; height: 200px; border-radius: 12px;"></ion-skeleton-text>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
+        </div>
+
+        <!-- Lista de tickets -->
+        <div *ngIf="!cargando">
+          <!-- Mensaje cuando no hay tickets -->
+          <div *ngIf="tickets.length === 0" class="empty-state">
+            <ion-icon name="folder-open-outline" class="empty-icon"></ion-icon>
+            <h3>No hay solicitudes abiertas</h3>
+            <p>Todas las solicitudes han sido procesadas</p>
+          </div>
+
+          <!-- Mensaje cuando no hay resultados de filtros -->
+          <div *ngIf="tickets.length > 0 && ticketsFiltrados.length === 0" class="no-results-state">
+            <ion-icon name="search-outline" class="empty-icon"></ion-icon>
+            <h3>Sin resultados</h3>
+            <p>No se encontraron solicitudes con los criterios seleccionados</p>
+            <ion-button fill="outline" size="small" (click)="limpiarFiltros()">
+              <ion-icon name="refresh-outline" slot="start"></ion-icon>
+              Limpiar Filtros
+            </ion-button>
+          </div>
+
+          <!-- Grid de tickets -->
+          <ion-grid *ngIf="ticketsFiltrados.length > 0" class="tickets-grid">
+            <ion-row>
+              <ion-col 
+                size="12" 
+                size-md="6" 
+                size-lg="4" 
+                *ngFor="let ticket of ticketsFiltrados; trackBy: tracqueoPorTicketId">
+                
+                <ion-card 
+                  class="ticket-card"
+                  [class.overdue]="estaVencido(ticket)"
+                  (click)="verDetalles(ticket)">
+                  
+                  <ion-card-content>
+                    <!-- Header del ticket -->
+                    <div class="ticket-header">
+                      <div class="ticket-number">
+                        <span class="number">{{ ticket.numero_ticket }}</span>
+                        <ion-chip 
+                          *ngIf="estaVencido(ticket)"
+                          color="danger" 
+                          class="overdue-chip">
+                          <ion-icon name="alarm-outline"></ion-icon>
+                          <ion-label>Vencido</ion-label>
+                        </ion-chip>
+                      </div>
+                      
+                      <div class="ticket-priority">
+                        <ion-chip 
+                          [color]="obtenerColorPrioridad(ticket.id_prioridad)"
+                          class="priority-chip">
+                          <ion-label>{{ obtenerNombrePrioridad(ticket.id_prioridad) }}</ion-label>
+                        </ion-chip>
+                      </div>
+                    </div>
+
+                    <!-- Asunto y descripción -->
+                    <div class="ticket-content">
+                      <h3 class="ticket-title">{{ ticket.asunto }}</h3>
+                      <p class="ticket-description">
+                        {{ ticket.descripcion.length > 80 ? (ticket.descripcion.substring(0, 80) + '...') : ticket.descripcion }}
+                      </p>
+                    </div>
+
+                    <!-- Información adicional -->
+                    <div class="ticket-info">
+                      <div class="info-row">
+                        <span class="label">Estado:</span>
+                        <ion-chip 
+                          [color]="obtenerColorEstado(ticket.id_estado || 1)"
+                          size="small">
+                          <ion-label>{{ obtenerNombreEstado(ticket.id_estado || 1) }}</ion-label>
+                        </ion-chip>
+                      </div>
+                      
+                      <div class="info-row">
+                        <span class="label">Departamento:</span>
+                        <span class="value">{{ obtenerNombreDepartamento(ticket.id_departamento) }}</span>
+                      </div>
+                      
+                      <div class="info-row">
+                        <span class="label">Creado:</span>
+                        <span class="value">{{ ticket.fecha_creacion | date:'dd/MM/yyyy HH:mm' }}</span>
+                      </div>
+                      
+                      <div class="info-row" *ngIf="ticket.fecha_vencimiento">
+                        <span class="label">Vencimiento:</span>
+                        <span class="value" [class.overdue-text]="estaVencido(ticket)">
+                          {{ ticket.fecha_vencimiento | date:'dd/MM/yyyy HH:mm' }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Acciones -->
+                    <div class="ticket-actions">
+                      <ion-button 
+                        size="small"
+                        fill="outline"
+                        color="primary"
+                        (click)="verDetalles(ticket); $event.stopPropagation()">
+                        <ion-icon name="eye-outline" slot="start"></ion-icon>
+                        Ver
+                      </ion-button>
+                      
+                      <ion-button 
+                        size="small"
+                        fill="solid"
+                        color="success"
+                        (click)="tomarTicket(ticket); $event.stopPropagation()">
+                        <ion-icon name="person-outline" slot="start"></ion-icon>
+                        Tomar
+                      </ion-button>
+                      
+                      <ion-button 
+                        size="small"
+                        fill="outline"
+                        color="medium"
+                        (click)="derivarTicket(ticket); $event.stopPropagation()">
+                        <ion-icon name="arrow-forward-outline" slot="start"></ion-icon>
+                        Derivar
+                      </ion-button>
+                    </div>
+                  </ion-card-content>
+                </ion-card>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
+        </div>
+      </div>
+    </div>
+  </div>
+</ion-content>

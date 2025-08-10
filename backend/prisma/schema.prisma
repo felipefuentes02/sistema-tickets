@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model archivos_adjuntos {
+  id_adjunto        Int       @id @default(autoincrement())
+  id_ticket         Int
+  id_comentario     Int
+  nombre_almacenado String    @db.VarChar(120)
+  ruta_archivo      String    @db.VarChar(200)
+  tamano_archivo    Int
+  tipo_mime         String    @db.VarChar(80)
+  subido_por        Int
+  fecha_creacion    DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model comentarios_ticket {
+  id_comentario       Int       @id @default(autoincrement())
+  id_ticket           Int
+  id_usuario          Int
+  comnentario         String
+  es_interno          Boolean?  @default(false)
+  es_solucion         Boolean?  @default(false)
+  fecha_creacion      DateTime? @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model configuraciones_sistema {
+  id_configuracion    Int       @id @default(autoincrement())
+  clave_configuracion String    @unique @db.VarChar
+  valor_configuracion String
+  tipo_dato           String?   @db.VarChar(20)
+  actualizado_por     Int
+  fecha_creacion      DateTime? @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion DateTime? @db.Timestamptz(6)
+}
+
+model departamentos {
+  id_departamento     Int    @id @default(autoincrement())
+  nombre_departamento String @unique @db.VarChar(25)
+}
+
+model derivaciones_ticket {
+  id_derivacion           Int       @id @default(autoincrement())
+  id_ticket               Int
+  id_departamento_origen  Int
+  id_departamento_destino Int
+  motivo                  String
+  derivado_por            Int
+  fecha_creacion          DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model encuestas {
+  id_encuesta  Int       @id @default(autoincrement())
+  id_ticket    Int
+  calificacion Int
+  comentario   String?
+  enviado_por  Int
+  fecha_envio  DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model estados_ticket {
+  id_estado       Int      @id @default(autoincrement())
+  nombre_estado   String   @unique @db.VarChar(25)
+  es_estado_final Boolean? @default(false)
+  orden_secuencia Int?
+}
+
+model historial_tickets {
+  id_his_ticket    Int       @id @default(autoincrement())
+  id_ticket        Int
+  id_usuario       Int
+  tipo_accion      String    @db.VarChar(30)
+  campo_modificado String    @db.VarChar(100)
+  valor_anterior   String?
+  valor_nuevo      String?
+  comentario       String?
+  fecha_creacion   DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model notificaciones {
+  id_notificacion    Int       @id @default(autoincrement())
+  id_usuario         Int
+  id_ticket          Int
+  tipo               String    @db.VarChar(50)
+  titulo             String    @db.VarChar(120)
+  mensaje            String
+  leido              Boolean?  @default(false)
+  correo_enviado     Boolean?  @default(false)
+  fecha_envio_correo DateTime? @db.Timestamptz(6)
+  fecha_creacion     DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model prioridades {
+  id_prioridad     Int    @id @default(autoincrement())
+  nombre_prioridad String @unique @db.VarChar(25)
+  nivel            Int    @unique
+}
+
+model roles {
+  id_rol     Int    @id @default(autoincrement())
+  nombre_rol String @unique @db.VarChar(25)
+  permisos   Json?
+}
+
+model sla_prioridades {
+  id_prioridad            Int       @id
+  tiempo_respuesta_horas  Int
+  tiempo_resolucion_horas Int
+  fecha_creacion          DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model tickets {
+  id_ticket           Int       @id @default(autoincrement())
+  numero_ticket       String    @unique @db.VarChar(25)
+  asunto              String    @db.VarChar(150)
+  descripcion         String
+  id_solicitante      Int
+  asignado_a          Int
+  id_departamento     Int
+  id_prioridad        Int
+  id_estado           Int
+  fecha_vencimiento   DateTime? @db.Timestamptz(6)
+  fecha_resolucion    DateTime? @db.Timestamptz(6)
+  fecha_cierre        DateTime? @db.Timestamptz(6)
+  fecha_creacion      DateTime? @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model usuarios {
+  id_usuario       Int       @id @default(autoincrement())
+  primer_nombre    String    @db.VarChar(25)
+  segundo_nombre   String?   @db.VarChar(25)
+  primer_apellido  String    @db.VarChar(25)
+  segundo_apellido String    @db.VarChar(25)
+  correo           String    @unique @db.VarChar(80)
+  hash_contrasena  String    @unique @db.VarChar(100)
+  id_rol           Int
+  id_departamento  Int?
+  ultimo_acceso    DateTime? @db.Timestamptz(6)
+  fecha_creacion   DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@map("usuarios")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model usuarios_en_copia {
+  id_ticket      Int
+  id_usuario     Int
+  agregado_por   Int
+  fecha_creacion DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@ignore
+}

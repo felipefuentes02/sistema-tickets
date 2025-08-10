@@ -1,0 +1,73 @@
+.header-section {
+  text-align: center;
+  margin-bottom: 30px;
+  
+  .logo-container {
+    margin-bottom: 20px;
+    
+    .logo-icon {
+      font-size: 80px;
+      color: var(--ion-color-primary);
+    }
+  }
+  
+  h1 {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 10px 0;
+    color: var(--ion-color-dark);
+  }
+  
+  .subtitle {
+    font-size: 16px;
+    color: var(--ion-color-medium);
+    margin: 0;
+  }
+}
+
+.main-buttons {
+  margin-bottom: 30px;
+  
+  .action-card {
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    
+    &:hover {
+      transform: translateY(-2px);
+    }
+    
+    .card-content {
+      text-align: center;
+      padding: 20px;
+      
+      .card-icon {
+        font-size: 48px;
+        color: var(--ion-color-primary);
+        margin-bottom: 15px;
+      }
+      
+      h2 {
+        font-size: 18px;
+        font-weight: bold;
+        margin: 10px 0 5px 0;
+        color: var(--ion-color-dark);
+      }
+      
+      p {
+        font-size: 14px;
+        color: var(--ion-color-medium);
+        margin: 0;
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (min-width: 768px) {
+  .main-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 15px;
+  }
+}

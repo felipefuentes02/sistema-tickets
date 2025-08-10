@@ -1,0 +1,26 @@
+<ion-header>
+  <ion-toolbar>
+    <!-- Logo de la empresa (lado izquierdo) -->
+    <ion-buttons slot="start">
+      <div class="logo-container" (click)="irAlHome()" style="cursor: pointer;">
+        <img src="assets/logo.png" alt="Logo Empresa" class="logo-image">
+      </div>
+    </ion-buttons>
+
+    <!-- Título central -->
+    <ion-title>{{ titulo }}</ion-title>
+
+    <!-- Usuario (lado derecho) -->
+    <ion-buttons slot="end">
+      <ion-button fill="clear" (click)="mostrarMenuUsuario($event)" class="user-button">
+        <div class="user-info">
+          <span class="user-name">{{ obtenerNombreCompleto() }}</span>
+          <div class="user-avatar">
+            <span class="user-initials">{{ obtenerIniciales() }}</span>
+          </div>
+        </div>
+        <ion-icon name="chevron-down-outline" class="dropdown-icon"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>

@@ -1,0 +1,258 @@
+<app-header titulo="Dashboard Responsable"></app-header>
+
+<ion-content>
+  <!-- Refresher -->
+  <ion-refresher slot="fixed" (ionRefresh)="refrescar($event)">
+    <ion-refresher-content
+      pullingIcon="chevron-down-outline"
+      pullingText="Desliza para actualizar"
+      refreshingSpinner="crescent"
+      refreshingText="Actualizando...">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <div class="dashboard-container">
+    <!-- Header con información del usuario -->
+    <div class="user-info-section ion-padding">
+      <div class="welcome-message">
+        <h2>Bienvenido, {{ obtenerNombreUsuario() }}</h2>
+        <p>{{ obtenerDepartamento() }} - Responsable de Respuesta</p>
+      </div>
+      <div class="last-update">
+        <ion-icon name="time-outline"></ion-icon>
+        <span>Actualizado: {{ fechaActual | date:'HH:mm' }}</span>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <!-- Navegación lateral -->
+      <div class="navigation-sidebar">
+        <h3>Navegación</h3>
+        <div class="nav-buttons">
+          <ion-button 
+            expand="block" 
+            fill="outline" 
+            color="primary"
+            class="nav-button"
+            (click)="irASolicitudesAbiertas()">
+            <ion-icon name="folder-open-outline" slot="start"></ion-icon>
+            Solicitudes Abiertas
+          </ion-button>
+
+          <ion-button 
+            expand="block" 
+            fill="outline" 
+            color="success"
+            class="dashboard-button"
+            (click)="irASolicitudesCerradas()">
+            <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+            <div class="button-content">
+              <span class="button-title">Solicitudes Cerradas</span>
+              <span class="button-subtitle">{{ resumen?.cerradas || 0 }} tickets</span>
+            </div>
+          </ion-button>
+
+          <ion-button 
+            expand="block" 
+            fill="outline" 
+            color="warning"
+            class="nav-button"
+            (click)="irASolicitudesPendientes()">
+            <ion-icon name="time-outline" slot="start"></ion-icon>
+            Solicitudes Pendientes
+          </ion-button>
+
+          <ion-button 
+            expand="block" 
+            fill="outline" 
+            color="secondary"
+            class="nav-button"
+            (click)="irAMetricas()">
+            <ion-icon name="analytics-outline" slot="start"></ion-icon>
+            Métricas Detalladas
+          </ion-button>
+        </div>
+      </div>
+
+      <!-- Dashboard principal -->
+      <div class="dashboard-content">
+        <!-- Métricas principales -->
+        <div class="metrics-grid">
+          <!-- Card de resumen general -->
+          <ion-card class="metric-card total-card">
+            <ion-card-content>
+              <div class="metric-header">
+                <ion-icon name="ticket-outline" color="primary"></ion-icon>
+                <h3>Total Tickets</h3>
+              </div>
+              <div class="metric-value">{{ metricasPrincipales.total_tickets }}</div>
+              <div class="metric-progress">
+                <div class="progress-info">
+                  <span>Completados: {{ obtenerPorcentajeCompletado() }}%</span>
+                </div>
+                <ion-progress-bar 
+                  [value]="obtenerPorcentajeCompletado() / 100" 
+                  color="success">
+                </ion-progress-bar>
+              </div>
+            </ion-card-content>
+          </ion-card>
+
+          <!-- Card tickets abiertos -->
+          <ion-card class="metric-card open-card">
+            <ion-card-content>
+              <div class="metric-header">
+                <ion-icon name="folder-open-outline" color="warning"></ion-icon>
+                <h3>Abiertos</h3>
+              </div>
+              <div class="metric-value">{{ metricasPrincipales.tickets_abiertos }}</div>
+              <div class="metric-subtitle">Requieren atención</div>
+            </ion-card-content>
+          </ion-card>
+
+          <!-- Card tickets vencidos -->
+          <ion-card class="metric-card overdue-card">
+            <ion-card-content>
+              <div class="metric-header">
+                <ion-icon name="alarm-outline" color="danger"></ion-icon>
+                <h3>Vencidos</h3>
+              </div>
+              <div class="metric-value critical">{{ metricasPrincipales.tickets_vencidos }}</div>
+              <div class="metric-subtitle">{{ obtenerPorcentajeVencidos() }}% del total</div>
+            </ion-card-content>
+          </ion-card>
+
+          <!-- Card tiempo promedio -->
+          <ion-card class="metric-card time-card">
+            <ion-card-content>
+              <div class="metric-header">
+                <ion-icon name="timer-outline" color="secondary"></ion-icon>
+                <h3>Tiempo Promedio</h3>
+              </div>
+              <div class="metric-value">{{ metricasPrincipales.tiempo_promedio_resolucion }}</div>
+              <div class="metric-subtitle">horas de resolución</div>
+            </ion-card-content>
+          </ion-card>
+
+          <!-- Card satisfacción -->
+          <ion-card class="metric-card satisfaction-card">
+            <ion-card-content>
+              <div class="metric-header">
+                <ion-icon name="star-outline" [color]="obtenerColorSatisfaccion()"></ion-icon>
+                <h3>Satisfacción</h3>
+              </div>
+              <div class="metric-value" [class]="obtenerColorSatisfaccion()">
+                {{ metricasPrincipales.satisfaccion_promedio }}/5
+              </div>
+              <div class="satisfaction-stars">
+                <ion-icon 
+                  *ngFor="let star of [1,2,3,4,5]" 
+                  name="star" 
+                  [color]="star <= metricasPrincipales.satisfaccion_promedio ? 'warning' : 'light'">
+                </ion-icon>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        </div>
+
+        <!-- Gráficos -->
+        <div class="charts-section">
+          <!-- Gráfico de tickets por estado -->
+          <ion-card class="chart-card">
+            <ion-card-header>
+              <ion-card-title>Tickets por Estado</ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              <div class="chart-container">
+                <!-- Gráfico circular simulado -->
+                <div class="pie-chart-container">
+                  <div class="pie-chart-legend">
+                    <div 
+                      *ngFor="let item of ticketsPorEstado" 
+                      class="legend-item">
+                      <div 
+                        class="legend-color" 
+                        [style.background-color]="item.color">
+                      </div>
+                      <span class="legend-label">{{ item.estado }}: {{ item.cantidad }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ion-card-content>
+          </ion-card>
+
+          <!-- Gráfico de tickets por prioridad -->
+          <ion-card class="chart-card">
+            <ion-card-header>
+              <ion-card-title>Tickets por Prioridad</ion-card-title>
+            </ion-card-header>
+            <ion-card-content>
+              <div class="priority-bars">
+                <div 
+                  *ngFor="let item of ticketsPorPrioridad" 
+                  class="priority-bar-item">
+                  <div class="priority-info">
+                    <span class="priority-label">{{ item.prioridad }}</span>
+                    <span class="priority-count">{{ item.cantidad }}</span>
+                  </div>
+                  <div class="priority-bar">
+                    <div 
+                      class="priority-fill" 
+                      [style.background-color]="item.color"
+                      [style.width.%]="(item.cantidad / metricasPrincipales.total_tickets) * 100">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ion-card-content>
+          </ion-card>
+
+          <!-- Tendencia semanal -->
+          <ion-card class="chart-card full-width">
+            <ion-card-header>
+              <ion-card-title>Tendencia Semanal</ion-card-title>
+              <ion-card-subtitle>Tickets creados vs resueltos</ion-card-subtitle>
+            </ion-card-header>
+            <ion-card-content>
+              <div class="weekly-chart">
+                <div 
+                  *ngFor="let dia of tendenciaSemanal" 
+                  class="day-column">
+                  <div class="day-label">{{ dia.dia }}</div>
+                  <div class="bars-container">
+                    <div class="bar-group">
+                      <div 
+                        class="bar created-bar" 
+                        [style.height.px]="dia.creados * 8"
+                        [attr.title]="'Creados: ' + dia.creados">
+                      </div>
+                      <div 
+                        class="bar resolved-bar" 
+                        [style.height.px]="dia.resueltos * 8"
+                        [attr.title]="'Resueltos: ' + dia.resueltos">
+                      </div>
+                    </div>
+                    <div class="day-numbers">
+                      <small>{{ dia.creados }}/{{ dia.resueltos }}</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="chart-legend">
+                <div class="legend-item">
+                  <div class="legend-color created"></div>
+                  <span>Creados</span>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-color resolved"></div>
+                  <span>Resueltos</span>
+                </div>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        </div>
+      </div>
+    </div>
+  </div>
+</ion-content>

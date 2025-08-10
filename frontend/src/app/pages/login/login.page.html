@@ -1,0 +1,45 @@
+<ion-content class="login-content">
+  <div class="login-container">
+    <!-- Logo de la empresa -->
+    <div class="logo-container">
+      <ion-img src="assets/logo.png" alt="Logo" class="logo"></ion-img>
+      <h1>Gestión de Tickets</h1>
+    </div>
+
+    <!-- Formulario de login -->
+    <form (ngSubmit)="onLogin()">
+      <ion-card class="login-card">
+        <ion-card-content>
+          <ion-item>
+            <ion-label position="stacked">Correo electrónico</ion-label>
+            <ion-input 
+              type="email" 
+              [(ngModel)]="credentials.correo" 
+              name="correo"
+              placeholder="usuario@dominio.com"
+              required>
+            </ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Contraseña</ion-label>
+            <ion-input 
+              type="password" 
+              [(ngModel)]="credentials.contrasena" 
+              name="contrasena"
+              placeholder="••••••••"
+              required>
+            </ion-input>
+          </ion-item>
+
+          <ion-button 
+            expand="block" 
+            type="submit" 
+            class="login-button">
+            Ingresar
+          </ion-button>
+        </ion-card-content>
+      </ion-card>
+    </form>
+  </div>
+</ion-content>

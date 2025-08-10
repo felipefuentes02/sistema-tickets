@@ -1,0 +1,136 @@
+<app-header titulo="Ingresar Solicitud"></app-header>
+
+<ion-content class="ion-padding">
+  <form (ngSubmit)="enviarSolicitud()">
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Nueva Solicitud de Soporte</ion-card-title>
+        <ion-card-subtitle>Complete todos los campos obligatorios</ion-card-subtitle>
+      </ion-card-header>
+
+      <ion-card-content>
+        <!-- Campo Asunto -->
+        <ion-item class="form-item">
+          <ion-label position="stacked">Asunto *</ion-label>
+          <ion-input 
+            type="text" 
+            [(ngModel)]="ticket.asunto" 
+            name="asunto"
+            placeholder="Ingrese el asunto de su solicitud"
+            maxlength="150"
+            required>
+          </ion-input>
+        </ion-item>
+
+        <!-- Campo Departamento -->
+        <ion-item class="form-item">
+          <ion-label position="stacked">Departamento Responsable *</ion-label>
+          <ion-select 
+            [(ngModel)]="ticket.id_departamento" 
+            name="departamento"
+            placeholder="Seleccione un departamento"
+            interface="popover">
+            <ion-select-option 
+              *ngFor="let dept of departamentos" 
+              [value]="dept.id_departamento">
+              {{ dept.nombre_departamento }}
+            </ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <!-- Campo Prioridad -->
+        <ion-item class="form-item">
+          <ion-label position="stacked">Prioridad *</ion-label>
+          <ion-select 
+            [(ngModel)]="ticket.id_prioridad" 
+            name="prioridad"
+            placeholder="Seleccione la prioridad"
+            interface="popover">
+            <ion-select-option 
+              *ngFor="let prioridad of prioridades" 
+              [value]="prioridad.id_prioridad">
+              {{ prioridad.nombre_prioridad }}
+            </ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <!-- Campo Descripción -->
+        <ion-item class="form-item description-item">
+          <ion-label position="stacked">Descripción del Problema *</ion-label>
+          <ion-textarea 
+            [(ngModel)]="ticket.descripcion" 
+            name="descripcion"
+            placeholder="Describa detalladamente su solicitud o problema..."
+            rows="6"
+            maxlength="1000"
+            required>
+          </ion-textarea>
+        </ion-item>
+
+        <!-- Sección de Archivos Adjuntos -->
+        <div class="file-section">
+          <h3>Archivos Adjuntos (Opcional)</h3>
+          <p class="file-info">Máximo 4 archivos ó 10MB</p>
+          
+          <ion-button 
+            fill="outline" 
+            expand="block"
+            (click)="fileInput.click()">
+            <ion-icon name="attach-outline" slot="start"></ion-icon>
+            Adjuntar Archivos
+          </ion-button>
+          
+          <input 
+            #fileInput
+            type="file" 
+            multiple 
+            style="display: none"
+            (change)="onFileSelected($event)"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt">
+
+          <!-- Lista de archivos seleccionados -->
+          <div *ngIf="archivosSeleccionados.length > 0" class="files-list">
+            <h4>Archivos seleccionados:</h4>
+            <ion-list>
+              <ion-item *ngFor="let archivo of archivosSeleccionados; let i = index">
+                <ion-icon name="document-outline" slot="start"></ion-icon>
+                <ion-label>
+                  <h3>{{ archivo.name }}</h3>
+                  <p>{{ (archivo.size / 1024 / 1024).toFixed(2) }} MB</p>
+                </ion-label>
+                <ion-button 
+                  fill="clear" 
+                  color="danger" 
+                  slot="end"
+                  (click)="eliminarArchivo(i)">
+                  <ion-icon name="trash-outline"></ion-icon>
+                </ion-button>
+              </ion-item>
+            </ion-list>
+          </div>
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="button-group">
+          <ion-button 
+            expand="block" 
+            type="submit" 
+            color="primary"
+            class="submit-button">
+            <ion-icon name="send-outline" slot="start"></ion-icon>
+            Enviar Solicitud
+          </ion-button>
+
+          <ion-button 
+            expand="block" 
+            fill="outline" 
+            color="medium"
+            (click)="limpiarFormulario()">
+            <ion-icon name="refresh-outline" slot="start"></ion-icon>
+            Limpiar Formulario
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </form>
+</ion-content>

@@ -1,0 +1,41 @@
+<ion-header>
+  <app-header titulo="Centro de Soporte"></app-header>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <!-- Header con logo y bienvenida -->
+  <div class="header-section">
+    <div class="logo-container">
+      <ion-icon name="ticket-outline" class="logo-icon"></ion-icon>
+    </div>
+    <h1>Bienvenido {{ obtenerNombreUsuario() }}</h1>
+    <p class="subtitle">Centro de Soporte de Tickets</p>
+  </div>
+
+  <!-- Botones principales -->
+  <div class="main-buttons">
+    <ion-card class="action-card" (click)="irAIngresarSolicitud()">
+      <ion-card-content class="card-content">
+        <ion-icon name="add-circle-outline" class="card-icon"></ion-icon>
+        <h2>Ingresar solicitud</h2>
+        <p>Crear una nueva solicitud de soporte</p>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card class="action-card" (click)="irAMisSolicitudes()">
+      <ion-card-content class="card-content">
+        <ion-icon name="list-outline" class="card-icon"></ion-icon>
+        <h2>Mis solicitudes</h2>
+        <p>Ver el estado de mis tickets</p>
+      </ion-card-content>
+    </ion-card>
+
+    <ion-card class="action-card" (click)="irASolicitudesEnCopia()">
+      <ion-card-content class="card-content">
+        <ion-icon name="copy-outline" class="card-icon"></ion-icon>
+        <h2>Solicitudes en cc</h2>
+        <p>Tickets donde estoy en copia</p>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>
