@@ -45,5 +45,13 @@ export const routes: Routes = [
   {
     path: 'solicitudes-cerradas',
     loadComponent: () => import('./pages/solicitudes-cerradas/solicitudes-cerradas.page').then( m => m.SolicitudesCerradasPage)
+  },
+ {
+    path: 'solicitudes-pendientes',
+    loadComponent: () => import('./pages/solicitudes-pendientes/solicitudes-pendientes.page').then(m => m.SolicitudesPendientesPage)
+  },
+  {
+  path: 'metricas',
+  loadComponent: () => import('./pages/metricas/metricas.page').then(m => m.MetricasPage)
   }
 ];

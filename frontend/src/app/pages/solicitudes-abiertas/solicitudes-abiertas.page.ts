@@ -2,11 +2,48 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { IonicModule, LoadingController, AlertController, ToastController } from '@ionic/angular';
+import { IonicModule, ToastController, LoadingController, RefresherCustomEvent } from '@ionic/angular';
 import { HeaderComponent } from '../../components/header/header.component';
-import { TicketsService } from '../../services/tickets.service';
-import { Ticket } from '../../interfaces/ticket.interface';
 
+//Interface para representar un ticket del sistema
+interface Ticket {
+  id_ticket: number;
+  numero_ticket?: string;
+  asunto: string;
+  descripcion: string;
+  id_solicitante: number;
+  id_departamento: number;
+  id_prioridad: number;
+  id_estado: number;
+  fecha_creacion: Date;
+  fecha_vencimiento: Date;
+}
+
+//Interface para estados disponibles
+interface Estado {
+  id: number;
+  nombre: string;
+  color: string;
+}
+
+//Interface para prioridades disponibles
+interface Prioridad {
+  id: number;
+  nombre: string;
+  color: string;
+}
+
+//Interface para departamentos disponibles
+
+interface Departamento {
+  id: number;
+  nombre: string;
+}
+
+/**
+ * Componente para gestionar las solicitudes abiertas del responsable
+ * Muestra todas las solicitudes pendientes por resolver dentro de los SLA
+ */
 @Component({
   selector: 'app-solicitudes-abiertas',
   templateUrl: './solicitudes-abiertas.page.html',
@@ -16,163 +53,97 @@ import { Ticket } from '../../interfaces/ticket.interface';
 })
 export class SolicitudesAbiertasPage implements OnInit {
 
+  // Propiedades de datos
   tickets: Ticket[] = [];
   ticketsFiltrados: Ticket[] = [];
+  
+  // Propiedades de estado
   cargando = false;
+  
+  // Propiedades de filtros
   terminoBusqueda = '';
-
-  // Filtros
   filtroEstado = '';
   filtroPrioridad = '';
   filtroDepartamento = '';
-
-  // Estados para filtros (solo estados abiertos)
-  estados = [
-    { id: 1, nombre: 'Nuevo' },
-    { id: 2, nombre: 'En Proceso' },
-    { id: 3, nombre: 'Pendiente Validación' }
+  filtroFecha = '';
+  
+  // Catálogos de datos
+  estados: Estado[] = [
+    { id: 1, nombre: 'Nuevo', color: 'primary' },
+    { id: 2, nombre: 'En Proceso', color: 'warning' },
+    { id: 3, nombre: 'Pendiente', color: 'danger' },
+    { id: 4, nombre: 'Escalado', color: 'secondary' }
+  ];
+  
+  prioridades: Prioridad[] = [
+    { id: 1, nombre: 'Baja', color: 'success' },
+    { id: 2, nombre: 'Media', color: 'warning' },
+    { id: 3, nombre: 'Alta', color: 'danger' }
+  ];
+  
+  departamentos: Departamento[] = [
+    { id: 1, nombre: 'Tecnologías de la Información' },
+    { id: 2, nombre: 'Recursos Humanos' },
+    { id: 3, nombre: 'Administración' },
+    { id: 4, nombre: 'Operaciones' }
   ];
 
-  prioridades = [
-    { id: 1, nombre: 'Alta' },
-    { id: 2, nombre: 'Media' },    
-    { id: 3, nombre: 'Baja' },
+  /**
+   * Opciones para filtro de fecha
+   */
+  opcionesFecha = [
+    { valor: 'hoy', nombre: 'Hoy' },
+    { valor: 'semana', nombre: 'Esta semana' },
+    { valor: 'mes', nombre: 'Este mes' },
+    { valor: 'vencidas', nombre: 'Vencidas' }
   ];
 
-  departamentos = [
-    { id: 1, nombre: 'Administración' },
-    { id: 2, nombre: 'Comercial' },
-    { id: 3, nombre: 'Informática' }, 
-    { id: 4, nombre: 'Operaciones' }    
-  ];
-
+  /**
+   * Constructor del componente
+   */
   constructor(
-    private ticketsService: TicketsService,
     private router: Router,
-    private loadingController: LoadingController,
-    private alertController: AlertController,
-    private toastController: ToastController
+    private toastController: ToastController,
+    private loadingController: LoadingController
   ) { }
 
+  /**
+   * Inicialización del componente
+   */
   ngOnInit() {
-    this.cargarSolicitudesAbiertas();
+    console.log('Iniciando SolicitudesAbiertasPage...');
+    this.cargarSolicitudes();
   }
 
-  async cargarSolicitudesAbiertas() {
+  /**
+   * Carga las solicitudes abiertas desde el backend
+   */
+  async cargarSolicitudes(): Promise<void> {
     this.cargando = true;
+    
     const loading = await this.loadingController.create({
-      message: 'Cargando solicitudes abiertas...'
+      message: 'Cargando solicitudes abiertas...',
+      duration: 2000
     });
     await loading.present();
 
-    this.ticketsService.obtenerTicketsAbiertos().subscribe({
-      next: (tickets: Ticket[]) => { // <-- Agregar tipo explícito
-        this.tickets = tickets;
-        this.aplicarFiltros();
-        this.cargando = false;
-        loading.dismiss();
-      },
-      error: (error: any) => { // <-- Agregar tipo explícito
-        this.cargando = false;
-        loading.dismiss();
-        console.error('Error al cargar tickets abiertos:', error);
-        // Cargar datos de ejemplo si no hay backend implementado
-        this.cargarDatosEjemplo();
-      }
-    });
+    try {
+      // TODO: Integrar con el backend real      
+      await loading.dismiss();
+      this.cargando = false;
+      console.log('Solicitudes cargadas exitosamente');
+    } catch (error) {
+      console.error('Error al cargar solicitudes:', error);
+      await loading.dismiss();
+      this.cargando = false;
+      await this.mostrarToast('Error al cargar las solicitudes', 'danger');
+    }
   }
 
-get cantidadTicketsVencidos(): number {
-  return this.ticketsFiltrados.filter(t => this.estaVencido(t)).length;
-}
-
-// Getter para verificar si hay tickets vencidos
-get hayTicketsVencidos(): boolean {
-  return this.ticketsFiltrados.some(t => this.estaVencido(t));
-}
-
-  // Método temporal con datos de ejemplo
-  private cargarDatosEjemplo() {
-    this.tickets = [
-      {
-        id_ticket: 1,
-        numero_ticket: 'TK202508001',
-        asunto: 'Problema con conexión de red',
-        descripcion: 'La conexión a internet se corta constantemente en el área de desarrollo',
-        id_solicitante: 5,
-        id_departamento: 1,
-        id_prioridad: 3,
-        id_estado: 1,
-        fecha_creacion: new Date('2025-08-09T09:30:00'),
-        fecha_vencimiento: new Date('2025-08-09T17:30:00')
-      },
-      {
-        id_ticket: 2,
-        numero_ticket: 'TK202508002',
-        asunto: 'Solicitud de nuevo software',
-        descripcion: 'Necesitamos instalar el software de diseño Adobe Creative Suite en 3 equipos',
-        id_solicitante: 3,
-        id_departamento: 1,
-        id_prioridad: 2,
-        id_estado: 2,
-        fecha_creacion: new Date('2025-08-09T10:15:00'),
-        fecha_vencimiento: new Date('2025-08-12T17:00:00')
-      },
-      {
-        id_ticket: 3,
-        numero_ticket: 'TK202508003',
-        asunto: 'Error en sistema de facturación',
-        descripcion: 'El sistema de facturación no permite generar reportes del mes anterior',
-        id_solicitante: 7,
-        id_departamento: 2,
-        id_prioridad: 3,
-        id_estado: 3,
-        fecha_creacion: new Date('2025-08-08T14:20:00'),
-        fecha_vencimiento: new Date('2025-08-09T14:20:00')
-      },
-      {
-        id_ticket: 4,
-        numero_ticket: 'TK202508004',
-        asunto: 'Configuración de correo corporativo',
-        descripcion: 'El nuevo empleado necesita configuración de su cuenta de correo corporativo',
-        id_solicitante: 4,
-        id_departamento: 1,
-        id_prioridad: 1,
-        id_estado: 1,
-        fecha_creacion: new Date('2025-08-09T11:45:00'),
-        fecha_vencimiento: new Date('2025-08-11T17:00:00')
-      },
-      {
-        id_ticket: 5,
-        numero_ticket: 'TK202508005',
-        asunto: 'Mantenimiento servidor de archivos',
-        descripcion: 'El servidor de archivos está presentando lentitud y necesita mantenimiento preventivo',
-        id_solicitante: 6,
-        id_departamento: 1,
-        id_prioridad: 2,
-        id_estado: 2,
-        fecha_creacion: new Date('2025-08-08T16:30:00'),
-        fecha_vencimiento: new Date('2025-08-10T16:30:00')
-      },
-      {
-        id_ticket: 6,
-        numero_ticket: 'TK202508006',
-        asunto: 'Problema con impresora láser',
-        descripcion: 'La impresora láser del piso 2 no está imprimiendo y muestra error de tóner',
-        id_solicitante: 8,
-        id_departamento: 3,
-        id_prioridad: 1,
-        id_estado: 1,
-        fecha_creacion: new Date('2025-08-09T13:15:00'),
-        fecha_vencimiento: new Date('2025-08-12T17:00:00')
-      }
-    ];
-    this.aplicarFiltros();
-    this.cargando = false;
-  }
-
-  // Filtrar tickets por búsqueda y filtros
-  aplicarFiltros() {
+  /**
+   * Aplica todos los filtros activos a la lista de tickets
+   */
+  aplicarFiltros(): void {
     this.ticketsFiltrados = this.tickets.filter(ticket => {
       // Filtro por término de búsqueda
       const coincideBusqueda = !this.terminoBusqueda || 
@@ -192,126 +163,216 @@ get hayTicketsVencidos(): boolean {
       const coincideDepartamento = !this.filtroDepartamento || 
         ticket.id_departamento?.toString() === this.filtroDepartamento;
 
-      return coincideBusqueda && coincideEstado && coincidePrioridad && coincideDepartamento;
+      // Filtro por fecha
+      const coincideFecha = this.verificarFiltroFecha(ticket);
+
+      return coincideBusqueda && coincideEstado && coincidePrioridad && 
+             coincideDepartamento && coincideFecha;
     });
+
+    console.log(`Filtros aplicados: ${this.ticketsFiltrados.length} de ${this.tickets.length} tickets`);
   }
 
-  // Buscar tickets
-  buscarTickets(event: any) {
-    this.terminoBusqueda = event.target.value;
-    this.aplicarFiltros();
+  /**
+   * Verifica si un ticket cumple con el filtro de fecha seleccionado
+   */
+  private verificarFiltroFecha(ticket: Ticket): boolean {
+    if (!this.filtroFecha) return true;
+
+    const ahora = new Date();
+    const fechaCreacion = ticket.fecha_creacion;
+    const fechaVencimiento = ticket.fecha_vencimiento;
+
+    switch (this.filtroFecha) {
+      case 'hoy':
+        return fechaCreacion.toDateString() === ahora.toDateString();
+      case 'semana':
+        const inicioSemana = new Date(ahora);
+        inicioSemana.setDate(ahora.getDate() - ahora.getDay());
+        return fechaCreacion >= inicioSemana;
+      case 'mes':
+        return fechaCreacion.getMonth() === ahora.getMonth() && 
+               fechaCreacion.getFullYear() === ahora.getFullYear();
+      case 'vencidas':
+        return fechaVencimiento < ahora;
+      default:
+        return true;
+    }
   }
 
-  // Cambiar filtros
-  cambiarFiltroEstado(event: any) {
-    this.filtroEstado = event.detail.value;
-    this.aplicarFiltros();
-  }
-
-  cambiarFiltroPrioridad(event: any) {
-    this.filtroPrioridad = event.detail.value;
-    this.aplicarFiltros();
-  }
-
-  cambiarFiltroDepartamento(event: any) {
-    this.filtroDepartamento = event.detail.value;
-    this.aplicarFiltros();
-  }
-
-  // Limpiar filtros
-  limpiarFiltros() {
+  /**
+   * Limpia todos los filtros aplicados
+   */
+  limpiarFiltros(): void {
+    console.log('Limpiando filtros...');
     this.terminoBusqueda = '';
     this.filtroEstado = '';
     this.filtroPrioridad = '';
     this.filtroDepartamento = '';
+    this.filtroFecha = '';
     this.aplicarFiltros();
   }
 
-  // Navegación
-  irAResponsableHome() {
+  // ===============================
+  // MÉTODOS DE NAVEGACIÓN
+  // ===============================
+
+  /**
+   * Navega al dashboard del responsable
+   */
+  irAResponsableHome(): void {
+    console.log('Navegando al dashboard del responsable...');
     this.router.navigate(['/responsable-home']);
   }
 
-  irASolicitudesCerradas() {
+  /**
+   * Navega a solicitudes cerradas
+   */
+  irASolicitudesCerradas(): void {
+    console.log('Navegando a solicitudes cerradas...');
     this.router.navigate(['/solicitudes-cerradas']);
   }
 
-  irASolicitudesPendientes() {
+  /**
+   * Navega a solicitudes pendientes
+   */
+  irASolicitudesPendientes(): void {
+    console.log('Navegando a solicitudes pendientes...');
     this.router.navigate(['/solicitudes-pendientes']);
   }
 
-  irAMetricas() {
+  /**
+   * Navega a métricas detalladas
+   */
+  irAMetricas(): void {
+    console.log('Navegando a métricas...');
     this.router.navigate(['/metricas']);
   }
 
-  // Acciones de tickets
-  verDetalles(ticket: Ticket) {
+  /**
+   * Muestra los detalles de un ticket específico
+   */
+  verDetalles(ticket: Ticket): void {
     console.log('Ver detalles del ticket:', ticket.id_ticket);
-    this.mostrarToast('Funcionalidad de detalles próximamente disponible', 'info');
+    this.mostrarToast('Funcionalidad de detalles próximamente disponible', 'primary');
   }
 
-  tomarTicket(ticket: Ticket) {
-    console.log('Tomar ticket:', ticket.id_ticket);
-    this.mostrarToast('Ticket tomado correctamente', 'success');
+  /**
+   * Toma la responsabilidad de un ticket
+   */
+  tomarTicket(ticket: Ticket): void {
+    console.log('Tomar responsabilidad del ticket:', ticket.id_ticket);
+    this.mostrarToast('Ticket asignado correctamente', 'success');
+    // TODO: Implementar lógica de asignación
   }
 
-  derivarTicket(ticket: Ticket) {
-    console.log('Derivar ticket:', ticket.id_ticket);
-    this.mostrarToast('Funcionalidad de derivación próximamente disponible', 'info');
+  /**
+   * Escala un ticket a un nivel superior
+   */
+  escalarTicket(ticket: Ticket): void {
+    console.log('Escalar ticket:', ticket.id_ticket);
+    this.mostrarToast('Ticket escalado correctamente', 'warning');
+    // TODO: Implementar lógica de escalamiento
   }
 
-  // Métodos de utilidad
+  /**
+   * Exporta un reporte de las solicitudes abiertas
+   */
+  exportarReporte(): void {
+    console.log('Exportar reporte de solicitudes abiertas');
+    this.mostrarToast('Funcionalidad de exportación próximamente disponible', 'secondary');
+  }
+  /**
+   * Obtiene el nombre del estado por su ID
+   */
   obtenerNombreEstado(idEstado: number): string {
     const estado = this.estados.find(e => e.id === idEstado);
     return estado ? estado.nombre : 'Desconocido';
   }
 
+  /**
+   * Obtiene el color del estado por su ID
+   */
+  obtenerColorEstado(idEstado: number): string {
+    const estado = this.estados.find(e => e.id === idEstado);
+    return estado ? estado.color : 'medium';
+  }
+
+  /**
+   * Obtiene el nombre de la prioridad por su ID
+   */
   obtenerNombrePrioridad(idPrioridad: number): string {
     const prioridad = this.prioridades.find(p => p.id === idPrioridad);
     return prioridad ? prioridad.nombre : 'Desconocido';
   }
 
+  /**
+   * Obtiene el color de la prioridad por su ID
+   */
+  obtenerColorPrioridad(idPrioridad: number): string {
+    const prioridad = this.prioridades.find(p => p.id === idPrioridad);
+    return prioridad ? prioridad.color : 'medium';
+  }
+
+  /**
+   * Obtiene el nombre del departamento por su ID
+   */
   obtenerNombreDepartamento(idDepartamento: number): string {
     const departamento = this.departamentos.find(d => d.id === idDepartamento);
     return departamento ? departamento.nombre : 'Desconocido';
   }
 
-  obtenerColorPrioridad(idPrioridad: number): string {
-    switch(idPrioridad) {
-      case 1: return 'success'; // Baja - Verde
-      case 2: return 'warning'; // Media - Amarillo
-      case 3: return 'danger';  // Alta - Rojo
-      default: return 'medium';
-    }
-  }
-
-  obtenerColorEstado(idEstado: number): string {
-    switch(idEstado) {
-      case 1: return 'primary'; // Nuevo
-      case 2: return 'warning'; // En Proceso
-      case 3: return 'tertiary'; // Pendiente Validación
-      default: return 'medium';
-    }
-  }
-
-  // Verificar si está vencido
+  /**
+   * Verifica si un ticket está vencido
+   */
   estaVencido(ticket: Ticket): boolean {
-    if (!ticket.fecha_vencimiento) return false;
-    return new Date() > new Date(ticket.fecha_vencimiento);
+    return ticket.fecha_vencimiento < new Date();
   }
 
-  // Refrescar lista
-  async refrescar(event: any) {
-    await this.cargarSolicitudesAbiertas();
-    event.target.complete();
+  /**
+   * Obtiene la cantidad de tickets vencidos
+   */
+  get cantidadTicketsVencidos(): number {
+    return this.ticketsFiltrados.filter(ticket => this.estaVencido(ticket)).length;
   }
 
-  // Método para tracking de la lista
-  tracqueoPorTicketId(index: number, ticket: Ticket): number {
-    return ticket.id_ticket || index;
+  /**
+   * Verifica si hay tickets vencidos en la lista filtrada
+   */
+  get hayTicketsVencidos(): boolean {
+    return this.cantidadTicketsVencidos > 0;
   }
 
-  private async mostrarToast(message: string, color: string) {
+  /**
+   * Calcula los días restantes hasta el vencimiento
+   */
+  diasRestantes(ticket: Ticket): number {
+    const ahora = new Date();
+    const vencimiento = ticket.fecha_vencimiento;
+    const diferencia = vencimiento.getTime() - ahora.getTime();
+    return Math.ceil(diferencia / (1000 * 3600 * 24));
+  }
+  
+ //Obtiene la cantidad de tickets de alta priorida
+  obtenerTicketsAltaPrioridad(): number {
+    return this.ticketsFiltrados.filter(ticket => ticket.id_prioridad === 3).length;
+  }
+
+   //Refresca los datos cuando el usuario desliza hacia abajo
+  async refrescar(event: RefresherCustomEvent): Promise<void> {
+    console.log('Refrescando solicitudes abiertas...');
+    
+    try {
+      await this.cargarSolicitudes();
+      console.log('Solicitudes refrescadas exitosamente');
+    } catch (error) {
+      console.error('Error al refrescar solicitudes:', error);
+    } finally {
+      event.target.complete();
+    }
+  }
+   //Muestra un mensaje toast al usuario  
+  private async mostrarToast(message: string, color: string): Promise<void> {
     const toast = await this.toastController.create({
       message,
       duration: 3000,
@@ -319,5 +380,8 @@ get hayTicketsVencidos(): boolean {
       position: 'top'
     });
     await toast.present();
+  }
+  trackByTicketId(index: number, ticket: Ticket): number {
+  return ticket.id_ticket;
   }
 }

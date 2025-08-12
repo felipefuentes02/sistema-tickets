@@ -1,0 +1,410 @@
+<app-header titulo="Métricas Detalladas"></app-header>
+
+<ion-content>
+  <!-- Refresher para actualizar -->
+  <ion-refresher slot="fixed" (ionRefresh)="refrescar($event)">
+    <ion-refresher-content
+      pullingIcon="chevron-down-outline"
+      pullingText="Desliza para actualizar"
+      refreshingSpinner="crescent"
+      refreshingText="Actualizando métricas...">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <div class="page-container">
+    <!-- Navegación lateral -->
+    <div class="navigation-sidebar">
+      <h3>Navegación</h3>
+      <div class="nav-buttons">
+        <ion-button 
+          expand="block" 
+          fill="outline" 
+          color="primary"
+          class="nav-button"
+          (click)="irASolicitudesAbiertas()">
+          <ion-icon name="folder-open-outline" slot="start"></ion-icon>
+          Solicitudes Abiertas
+        </ion-button>
+
+        <ion-button 
+          expand="block" 
+          fill="outline" 
+          color="success"
+          class="nav-button"
+          (click)="irASolicitudesCerradas()">
+          <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+          Solicitudes Cerradas
+        </ion-button>
+
+        <ion-button 
+          expand="block" 
+          fill="outline" 
+          color="warning"
+          class="nav-button"
+          (click)="irASolicitudesPendientes()">
+          <ion-icon name="time-outline" slot="start"></ion-icon>
+          Solicitudes Pendientes
+        </ion-button>
+
+        <ion-button 
+          expand="block" 
+          fill="outline" 
+          color="secondary"
+          class="nav-button current"
+          disabled>
+          <ion-icon name="analytics-outline" slot="start"></ion-icon>
+          Métricas
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- Contenido principal -->
+    <div class="main-content">
+      <!-- Header de métricas -->
+      <div class="metrics-header">
+        <div class="header-info">
+          <h1>Métricas del Departamento</h1>
+          <h2>{{ departamentoUsuario }}</h2>
+          <p>Dashboard detallado con mayores opciones de visualización</p>
+        </div>
+        <div class="header-actions">
+        </div>
+      </div>
+
+      <!-- MÉTRICA 1: Rendimiento General -->
+      <div class="metrics-section">
+        <h3>1. Rendimiento General</h3>
+        <div class="metrics-grid">
+          <ion-card class="metric-card">
+            <ion-card-content>
+              <div class="metric-header">
+                <ion-icon name="speedometer-outline" color="primary"></ion-icon>
+                <h4>Tickets Totales</h4>
+              </div>
+              <div class="metric-value">{{ metricasRendimiento.tickets_totales }}</div>
+              <div class="metric-detail">
+                <span>Resueltos: {{ metricasRendimiento.tickets_resueltos }}</span>
+                <span>Pendientes: {{ metricasRendimiento.tickets_pendientes }}</span>
+              </div>
+            </ion-card-content>
+          </ion-card>
+
+          <ion-card class="metric-card">
+            <ion-card-content>
+              <div class="metric-header">
+                <ion-icon name="time-outline" color="warning"></ion-icon>
+                <h4>Tiempo Promedio</h4>
+              </div>
+              <div class="metric-value">{{ metricasRendimiento.tiempo_promedio_resolucion }}h</div>
+              <div class="metric-detail">
+                <span>Resolución promedio</span>
+              </div>
+            </ion-card-content>
+          </ion-card>
+
+          <ion-card class="metric-card">
+            <ion-card-content>
+              <div class="metric-header">
+                <ion-icon name="checkmark-circle-outline" [color]="obtenerColorSLA()"></ion-icon>
+                <h4>Cumplimiento SLA</h4>
+              </div>
+              <div class="metric-value">{{ metricasRendimiento.porcentaje_cumplimiento_sla }}%</div>
+              <ion-progress-bar 
+                [value]="metricasRendimiento.porcentaje_cumplimiento_sla / 100" 
+                [color]="obtenerColorSLA()">
+              </ion-progress-bar>
+            </ion-card-content>
+          </ion-card>
+        </div>
+      </div>
+
+      <!-- MÉTRICA 2: Distribución por Prioridad -->
+      <div class="metrics-section">
+        <h3>2. Distribución por Prioridad</h3>
+        <ion-card class="chart-card">
+          <ion-card-content>
+            <div class="priority-distribution">
+              <div class="priority-item">
+                <div class="priority-circle alta">
+                  <span>{{ distribucionPrioridad.alta }}</span>
+                </div>
+                <h4>Alta Prioridad</h4>
+                <p>{{ ((distribucionPrioridad.alta / metricasRendimiento.tickets_totales) * 100).toFixed(1) }}%</p>
+              </div>
+
+              <div class="priority-item">
+                <div class="priority-circle media">
+                  <span>{{ distribucionPrioridad.media }}</span>
+                </div>
+                <h4>Media Prioridad</h4>
+                <p>{{ ((distribucionPrioridad.media / metricasRendimiento.tickets_totales) * 100).toFixed(1) }}%</p>
+              </div>
+
+              <div class="priority-item">
+                <div class="priority-circle baja">
+                  <span>{{ distribucionPrioridad.baja }}</span>
+                </div>
+                <h4>Baja Prioridad</h4>
+                <p>{{ ((distribucionPrioridad.baja / metricasRendimiento.tickets_totales) * 100).toFixed(1) }}%</p>
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </div>
+
+      <!-- MÉTRICA 3: Tendencia Mensual -->
+      <div class="metrics-section">
+        <h3>3. Tendencia Mensual</h3>
+        <ion-card class="chart-card">
+          <ion-card-content>
+            <div class="monthly-trend">
+              <div class="trend-header">
+                <div class="legend">
+                  <div class="legend-item">
+                    <div class="color-box creados"></div>
+                    <span>Creados</span>
+                  </div>
+                  <div class="legend-item">
+                    <div class="color-box resueltos"></div>
+                    <span>Resueltos</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="trend-chart">
+                <div class="trend-item" *ngFor="let mes of tendenciaMensual">
+                  <div class="month-name">{{ mes.mes }}</div>
+                  <div class="bars-container">
+                    <div class="bar creados" [style.height.px]="mes.creados * 3">
+                      <span class="bar-value">{{ mes.creados }}</span>
+                    </div>
+                    <div class="bar resueltos" [style.height.px]="mes.resueltos * 3">
+                      <span class="bar-value">{{ mes.resueltos }}</span>
+                    </div>
+                  </div>
+                  <div class="satisfaction-score">
+                    <ion-icon name="star" color="warning"></ion-icon>
+                    <span>{{ mes.satisfaccion_promedio }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </div>
+
+      <!-- GRÁFICO 1: Actividad en Tiempo Real -->
+      <div class="metrics-section">
+        <h3>📊 Gráfico 1: Actividad en Tiempo Real</h3>
+        <ion-card class="chart-card live-chart">
+          <ion-card-header>
+            <ion-card-title>
+              Tickets Nuevos vs Resueltos
+              <ion-badge color="success" class="live-indicator">
+                <ion-icon name="radio-outline"></ion-icon>
+                EN VIVO
+              </ion-badge>
+            </ion-card-title>
+            <ion-card-subtitle>Actualización cada 5 segundos</ion-card-subtitle>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="live-chart-container">
+              <div class="chart-legend">
+                <div class="legend-item">
+                  <div class="color-box nuevos-live"></div>
+                  <span>Nuevos Tickets</span>
+                </div>
+                <div class="legend-item">
+                  <div class="color-box resueltos-live"></div>
+                  <span>Tickets Resueltos</span>
+                </div>
+              </div>
+              
+              <div class="live-bars-chart">
+                <div class="time-axis">
+                  <div class="time-item" *ngFor="let dato of datosGraficoTiempoReal">
+                    <div class="time-label">{{ dato.tiempo }}</div>
+                    <div class="bars-group">
+                      <div class="bar-live nuevos" 
+                           [style.height.px]="(dato.nuevos / obtenerMaximoGrafico()) * 100">
+                        <span class="bar-value">{{ dato.nuevos }}</span>
+                      </div>
+                      <div class="bar-live resueltos" 
+                           [style.height.px]="(dato.resueltos / obtenerMaximoGrafico()) * 100">
+                        <span class="bar-value">{{ dato.resueltos }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </div>
+
+      <!-- GRÁFICO 2: Distribución Circular en Tiempo Real -->
+      <div class="metrics-section">
+        <h3>🥧 Gráfico 2: Distribución de Prioridades</h3>
+        <ion-card class="chart-card circular-chart">
+          <ion-card-header>
+            <ion-card-title>
+              Prioridades en Tiempo Real
+              <ion-badge color="warning" class="live-indicator">
+                <ion-icon name="sync-outline"></ion-icon>
+                DINÁMICO
+              </ion-badge>
+            </ion-card-title>
+            <ion-card-subtitle>Actualización cada 8 segundos</ion-card-subtitle>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="circular-chart-container">
+              <div class="circle-chart">
+               <svg viewBox="0 0 200 200" class="circular-svg">
+                <!-- Círculo base -->
+                <circle cx="100" cy="100" r="80" fill="none" stroke="#f0f0f0" stroke-width="20"></circle>
+                
+                <!-- Segmentos dinámicos -->
+                <ng-container *ngFor="let item of datosGraficoCircular; let i = index">
+                  <circle 
+                    cx="100" 
+                    cy="100" 
+                    r="80" 
+                    fill="none" 
+                    [attr.stroke]="item.color" 
+                    stroke-width="20"
+                    [attr.stroke-dasharray]="(item.porcentaje * 502.4 / 100) + ' 502.4'"
+                    [attr.stroke-dashoffset]="obtenerOffsetCircular(i)"
+                    class="circle-segment">
+                  </circle>
+                </ng-container>
+                
+                <!-- Texto central -->
+                <text x="100" y="95" text-anchor="middle" class="chart-center-text">Total</text>
+                <text x="100" y="115" text-anchor="middle" class="chart-center-number">
+                  {{ obtenerTotalValores() }}
+                </text>
+              </svg>
+              </div>
+              
+              <div class="circular-legend">
+                <div class="circular-legend-item" *ngFor="let item of datosGraficoCircular">
+                  <div class="legend-color" [style.background-color]="item.color"></div>
+                  <div class="legend-content">
+                    <span class="legend-name">{{ item.nombre }}</span>
+                    <div class="legend-stats">
+                      <span class="legend-value">{{ item.valor }}</span>
+                      <span class="legend-percentage">({{ item.porcentaje.toFixed(1) }}%)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </div>
+
+      <!-- MÉTRICA 4: Satisfacción del Cliente -->
+      <div class="metrics-section">
+        <h3>4. Satisfacción del Cliente</h3>
+        <div class="satisfaction-grid">
+          <ion-card class="metric-card satisfaction-summary">
+            <ion-card-content>
+              <div class="metric-header">
+                <ion-icon name="star-outline" [color]="obtenerColorSatisfaccion()"></ion-icon>
+                <h4>Promedio General</h4>
+              </div>
+              <div class="metric-value">{{ satisfaccionCliente.promedio_general }}/5</div>
+              <div class="metric-detail">
+                <span>{{ satisfaccionCliente.total_encuestas }} encuestas</span>
+              </div>
+            </ion-card-content>
+          </ion-card>
+
+          <ion-card class="satisfaction-breakdown">
+            <ion-card-content>
+              <h4>Distribución de Satisfacción</h4>
+              <div class="satisfaction-bars">
+                <div class="satisfaction-row">
+                  <span class="label">Satisfecho</span>
+                  <div class="bar-container">
+                    <div class="bar success" 
+                         [style.width.%]="(satisfaccionCliente.satisfecho / satisfaccionCliente.total_encuestas) * 100">
+                    </div>
+                    <span class="value">{{ satisfaccionCliente.satisfecho }}</span>
+                  </div>
+                </div>
+
+                <div class="satisfaction-row">
+                  <span class="label">Neutral</span>
+                  <div class="bar-container">
+                    <div class="bar warning" 
+                         [style.width.%]="(satisfaccionCliente.neutral / satisfaccionCliente.total_encuestas) * 100">
+                    </div>
+                    <span class="value">{{ satisfaccionCliente.neutral }}</span>
+                  </div>
+                </div>
+
+                <div class="satisfaction-row">
+                  <span class="label">Insatisfecho</span>
+                  <div class="bar-container">
+                    <div class="bar danger" 
+                         [style.width.%]="(satisfaccionCliente.insatisfecho / satisfaccionCliente.total_encuestas) * 100">
+                    </div>
+                    <span class="value">{{ satisfaccionCliente.insatisfecho }}</span>
+                  </div>
+                </div>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        </div>
+      </div>
+
+      <!-- Resumen final -->
+      <div class="summary-section">
+        <ion-card class="summary-card">
+          <ion-card-content>
+            <h3>Resumen Ejecutivo - {{ departamentoUsuario }}</h3>
+            <div class="summary-stats">
+              <div class="stat-item">
+                <span class="stat-label">Eficiencia de Resolución:</span>
+                <span class="stat-value">{{ obtenerPorcentajeResolucion() }}%</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Cumplimiento SLA:</span>
+                <span class="stat-value" [ngClass]="'text-' + obtenerColorSLA()">
+                  {{ metricasRendimiento.porcentaje_cumplimiento_sla }}%
+                </span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Satisfacción Cliente:</span>
+                <span class="stat-value" [ngClass]="'text-' + obtenerColorSatisfaccion()">
+                  {{ satisfaccionCliente.promedio_general }}/5
+                </span>
+              </div>
+            </div>
+            <p class="summary-note">
+              Última actualización: {{ fechaActual | date:'dd/MM/yyyy HH:mm' }}
+            </p>
+          </ion-card-content>
+        </ion-card>
+      </div>
+
+      <!-- Mensaje de carga -->
+      <div *ngIf="cargando" class="loading-container">
+        <ion-spinner name="crescent"></ion-spinner>
+        <p>Cargando métricas del departamento...</p>
+      </div>
+
+      <!-- Mensaje cuando no hay datos -->
+      <div *ngIf="!cargando && !hayDatosGraficos()" class="no-data-container">
+        <ion-icon name="analytics-outline" class="no-data-icon"></ion-icon>
+        <h3>Métricas no disponibles</h3>
+        <p>Los gráficos en tiempo real se cargarán automáticamente.</p>
+        <ion-button fill="outline" (click)="cargarMetricas()">
+          <ion-icon name="refresh-outline" slot="start"></ion-icon>
+          Recargar Métricas
+        </ion-button>
+      </div>
+    </div>
+  </div>
+</ion-content>

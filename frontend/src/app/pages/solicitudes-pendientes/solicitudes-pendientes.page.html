@@ -1,4 +1,4 @@
-<app-header titulo="Solicitudes Abiertas"></app-header>
+<app-header titulo="Solicitudes Pendientes"></app-header>
 
 <ion-content>
   <!-- Refresher para actualizar -->
@@ -20,8 +20,8 @@
           expand="block" 
           fill="outline" 
           color="primary"
-          class="nav-button current"
-          disabled>
+          class="nav-button"
+          (click)="irASolicitudesAbiertas()">
           <ion-icon name="folder-open-outline" slot="start"></ion-icon>
           Solicitudes Abiertas
         </ion-button>
@@ -40,8 +40,8 @@
           expand="block" 
           fill="outline" 
           color="warning"
-          class="nav-button"
-          (click)="irASolicitudesPendientes()">
+          class="nav-button current"
+          disabled>
           <ion-icon name="time-outline" slot="start"></ion-icon>
           Solicitudes Pendientes
         </ion-button>
@@ -64,20 +64,20 @@
       <div class="stats-section">
         <div class="stat-card">
           <div class="stat-value">{{ ticketsFiltrados.length }}</div>
-          <div class="stat-label">Total Solicitudes Abiertas</div>
+          <div class="stat-label">Total Solicitudes Pendientes</div>
         </div>
       </div>
 
       <!-- Barra de búsqueda y filtros -->
       <div class="search-filter-section">
         <div class="section-header">
-          <h2>Solicitudes Abiertas</h2>
-          <p>Historial de solicitudes pendientes y en proceso</p>
+          <h2>Solicitudes Pendientes</h2>
+          <p>Tickets que ya vencieron el plazo de respuesta</p>
         </div>
 
         <!-- Barra de búsqueda -->
         <ion-searchbar 
-          placeholder="Buscar por asunto, número o descripción..."
+          placeholder="Buscar por asunto, número, descripción o solicitante..."
           [(ngModel)]="terminoBusqueda"
           (ionInput)="aplicarFiltros()"
           showClearButton="focus">
@@ -110,7 +110,7 @@
               interface="popover">
               <ion-select-option value="">Todas</ion-select-option>
               <ion-select-option 
-                *ngFor="let prioridad of prioridades" 
+                *ngFor="let prioridad de prioridades" 
                 [value]="prioridad.id">
                 {{ prioridad.nombre }}
               </ion-select-option>
@@ -144,7 +144,7 @@
 
         <!-- Contador de resultados -->
         <div *ngIf="!cargando && tickets.length > 0" class="results-info">
-          <p>Mostrando {{ ticketsFiltrados.length }} de {{ tickets.length }} solicitudes abiertas</p>
+          <p>Mostrando {{ ticketsFiltrados.length }} de {{ tickets.length }} solicitudes pendientes</p>
         </div>
       </div>
 
@@ -165,16 +165,16 @@
         <div *ngIf="!cargando">
           <!-- Mensaje cuando no hay tickets -->
           <div *ngIf="tickets.length === 0" class="empty-state">
-            <ion-icon name="folder-open-outline" class="empty-icon"></ion-icon>
-            <h3>No hay solicitudes abiertas</h3>
-            <p>Todas las solicitudes han sido procesadas</p>
+            <ion-icon name="time-outline" class="empty-icon"></ion-icon>
+            <h3>No hay solicitudes pendientes</h3>
+            <p>Todas las solicitudes están dentro de los plazos</p>
           </div>
 
           <!-- Mensaje cuando no hay resultados de filtros -->
           <div *ngIf="tickets.length > 0 && ticketsFiltrados.length === 0" class="no-results-state">
             <ion-icon name="search-outline" class="empty-icon"></ion-icon>
             <h3>Sin resultados</h3>
-            <p>No se encontraron solicitudes abiertas con los criterios seleccionados</p>
+            <p>No se encontraron solicitudes pendientes con los criterios seleccionados</p>
             <ion-button fill="outline" size="small" (click)="limpiarFiltros()">
               <ion-icon name="refresh-outline" slot="start"></ion-icon>
               Limpiar Filtros
@@ -191,7 +191,7 @@
                 *ngFor="let ticket of ticketsFiltrados">
                 
                 <ion-card 
-                  class="ticket-card open"
+                  class="ticket-card overdue"
                   (click)="verDetalles(ticket)">
                   
                   <ion-card-content>
@@ -200,10 +200,10 @@
                       <div class="ticket-number">
                         <span class="number">{{ ticket.numero_ticket }}</span>
                         <ion-chip 
-                          [color]="obtenerColorEstado(ticket.id_estado)"
+                          color="danger"
                           class="status-chip">
-                          <ion-icon name="folder-open-outline"></ion-icon>
-                          <ion-label>{{ obtenerNombreEstado(ticket.id_estado) }}</ion-label>
+                          <ion-icon name="alarm-outline"></ion-icon>
+                          <ion-label>Vencido</ion-label>
                         </ion-chip>
                       </div>
                       
@@ -236,10 +236,9 @@
                       </div>
                                             
                       <div class="info-row">
-                        <span class="label">Días restantes:</span>
-                        <span class="value time-badge" 
-                              [ngClass]="{'text-danger': estaVencido(ticket), 'text-warning': diasRestantes(ticket) <= 1}">
-                          {{ estaVencido(ticket) ? 'Vencido' : diasRestantes(ticket) + ' días' }}
+                        <span class="label">Días vencido:</span>
+                        <span class="value time-badge text-danger">
+                          {{ diasVencido(ticket) }} días
                         </span>
                       </div>
                       
@@ -263,10 +262,10 @@
                       <ion-button 
                         size="small"
                         fill="outline"
-                        color="success"
-                        (click)="tomarTicket(ticket); $event.stopPropagation()">
-                        <ion-icon name="person-add-outline" slot="start"></ion-icon>
-                        Tomar
+                        color="warning"
+                        (click)="escalarTicket(ticket); $event.stopPropagation()">
+                        <ion-icon name="arrow-up-outline" slot="start"></ion-icon>
+                        Escalar
                       </ion-button>
                     </div>
                   </ion-card-content>
