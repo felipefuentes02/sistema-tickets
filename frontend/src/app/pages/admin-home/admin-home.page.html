@@ -1,0 +1,361 @@
+<!-- Header del componente -->
+<app-header titulo="Home Administrador"></app-header>
+
+<ion-content>
+  <!-- Refresher para actualizar datos deslizando hacia abajo -->
+  <ion-refresher slot="fixed" (ionRefresh)="refrescar($event)">
+    <ion-refresher-content
+      pullingIcon="chevron-down-outline"
+      pullingText="Desliza para actualizar"
+      refreshingSpinner="crescent"
+      refreshingText="Actualizando datos...">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <div class="admin-container">
+    <!-- Sección de bienvenida y información del usuario -->
+    <div class="welcome-section ion-padding">
+      <div class="welcome-header">
+        <div class="welcome-text">
+          <h1>Bienvenido, {{ obtenerNombreUsuario() }}</h1>
+          <p class="subtitle">Panel de Control - Administrador del Sistema</p>
+        </div>
+        <div class="last-update">
+          <ion-icon name="time-outline"></ion-icon>
+          <span>Última actualización: {{ fechaActual | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra de navegación principal -->
+    <div class="navigation-bar ion-padding-horizontal">
+      <div class="nav-buttons-container">
+        <ion-button 
+          fill="clear" 
+          class="nav-button active"
+          (click)="irADashboard()">
+          <ion-icon name="grid-outline" slot="start"></ion-icon>
+          Dashboard
+        </ion-button>
+        
+        <ion-button 
+          fill="clear" 
+          class="nav-button"
+          (click)="irAGestionUsuarios()">
+          <ion-icon name="people-outline" slot="start"></ion-icon>
+          Gestión Usuarios
+        </ion-button>
+        
+        <ion-button 
+          fill="clear" 
+          class="nav-button"
+          (click)="irAReportes()">
+          <ion-icon name="bar-chart-outline" slot="start"></ion-icon>
+          Reportes
+        </ion-button>
+        
+        <ion-button 
+          fill="clear" 
+          class="nav-button"
+          (click)="irAConfiguracion()">
+          <ion-icon name="settings-outline" slot="start"></ion-icon>
+          Configuración
+        </ion-button>
+      </div>
+    </div>
+
+    <!-- Contenido principal del dashboard -->
+    <div class="main-content ion-padding">
+      
+      <!-- Resumen general de la empresa -->
+      <div class="summary-section">
+        <h2>Resumen General de la Empresa</h2>
+        
+        <div class="summary-cards">
+          <!-- Tarjeta Total de Tickets -->
+          <div class="summary-card primary">
+            <div class="card-icon">
+              <ion-icon name="document-text-outline"></ion-icon>
+            </div>
+            <div class="card-content">
+              <h3>{{ formatearNumero(resumenEmpresa.totalTickets) }}</h3>
+              <p>Total Tickets</p>
+            </div>
+          </div>
+
+          <!-- Tarjeta Tickets Abiertos -->
+          <div class="summary-card info">
+            <div class="card-icon">
+              <ion-icon name="folder-open-outline"></ion-icon>
+            </div>
+            <div class="card-content">
+              <h3>{{ formatearNumero(resumenEmpresa.ticketsAbiertos) }}</h3>
+              <p>Tickets Abiertos</p>
+              <small>{{ calcularPorcentaje(resumenEmpresa.ticketsAbiertos, resumenEmpresa.totalTickets) }}% del total</small>
+            </div>
+          </div>
+
+          <!-- Tarjeta Tickets Cerrados -->
+          <div class="summary-card success">
+            <div class="card-icon">
+              <ion-icon name="checkmark-circle-outline"></ion-icon>
+            </div>
+            <div class="card-content">
+              <h3>{{ formatearNumero(resumenEmpresa.ticketsCerrados) }}</h3>
+              <p>Tickets Cerrados</p>
+              <small>{{ calcularPorcentaje(resumenEmpresa.ticketsCerrados, resumenEmpresa.totalTickets) }}% del total</small>
+            </div>
+          </div>
+
+          <!-- Tarjeta Tiempo Promedio -->
+          <div class="summary-card warning">
+            <div class="card-icon">
+              <ion-icon name="time-outline"></ion-icon>
+            </div>
+            <div class="card-content">
+              <h3>{{ resumenEmpresa.tiempoPromedioResolucion | number:'1.1-1' }} días</h3>
+              <p>Tiempo Promedio de Resolución</p>
+            </div>
+          </div>
+
+          <!-- Tarjeta Satisfacción -->
+          <div class="summary-card info">
+            <div class="card-icon">
+              <ion-icon name="star-outline"></ion-icon>
+            </div>
+            <div class="card-content">
+              <h3>{{ resumenEmpresa.satisfaccionPromedio | number:'1.1-1' }}/10</h3>
+              <p>Satisfacción Promedio</p>
+            </div>
+          </div>
+
+          <!-- Tarjeta Usuarios Activos -->
+          <div class="summary-card primary">
+            <div class="card-icon">
+              <ion-icon name="people-outline"></ion-icon>
+            </div>
+            <div class="card-content">
+              <h3>{{ formatearNumero(resumenEmpresa.usuariosActivos) }}</h3>
+              <p>Usuarios Activos</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Selector de departamento -->
+      <div class="department-selector">
+        <h3>Ver métricas por departamento:</h3>
+        <ion-segment 
+          value="{{ departamentoSeleccionado }}" 
+          (ionChange)="cambiarDepartamento($event)">
+          <ion-segment-button value="todos">
+            <ion-label>Todos</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="1">
+            <ion-label>Administración</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="2">
+            <ion-label>Comercial</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="3">
+            <ion-label>Informática</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="4">
+            <ion-label>Operaciones</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </div>
+
+      <!-- Sección de gráficos y métricas -->
+      <div class="charts-section">
+        <div class="row">
+          
+          <!-- Gráfico de distribución por estado -->
+          <div class="col-md-6">
+            <div class="chart-container">
+              <h3>Distribución por Estado</h3>
+              <div class="chart-placeholder">
+                <!-- Gráfico de dona simple con CSS -->
+                <div class="donut-chart">
+                  <div class="chart-center">
+                    <span class="total-number">{{ formatearNumero(resumenEmpresa.totalTickets) }}</span>
+                    <span class="total-label">Total</span>
+                  </div>
+                </div>
+                
+                <!-- Leyenda del gráfico -->
+                <div class="chart-legend">
+                  <div 
+                    *ngFor="let item of ticketsPorEstado" 
+                    class="legend-item"
+                    [style.border-left-color]="item.color">
+                    <span class="legend-color" [style.background-color]="item.color"></span>
+                    <span class="legend-text">{{ item.estado }}: {{ item.cantidad }} ({{ item.porcentaje | number:'1.0-1' }}%)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tendencia mensual -->
+          <div class="col-md-6">
+            <div class="chart-container">
+              <h3>Tendencia Mensual</h3>
+              <div class="chart-placeholder">
+                <!-- Gráfico de barras simple -->
+                <div class="bar-chart">
+                  <div *ngFor="let mes of tendenciaMensual" class="bar-group">
+                    <div class="bars">
+                      <div 
+                        class="bar creados" 
+                        [style.height.px]="(mes.creados / 300) * 100">
+                      </div>
+                      <div 
+                        class="bar resueltos" 
+                        [style.height.px]="(mes.resueltos / 300) * 100">
+                      </div>
+                    </div>
+                    <span class="bar-label">{{ mes.mes }}</span>
+                  </div>
+                </div>
+                
+                <!-- Leyenda del gráfico de barras -->
+                <div class="chart-legend">
+                  <div class="legend-item">
+                    <span class="legend-color" style="background-color: #3498db;"></span>
+                    <span class="legend-text">Creados</span>
+                  </div>
+                  <div class="legend-item">
+                    <span class="legend-color" style="background-color: #2ecc71;"></span>
+                    <span class="legend-text">Resueltos</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Métricas por departamento -->
+      <div class="departments-section">
+        <h2>Métricas por Departamento</h2>
+        
+        <div class="departments-grid">
+          <div 
+            *ngFor="let dept of departamentos" 
+            class="department-card"
+            (click)="verDetalleDepartamento(dept)">
+            
+            <!-- Header del departamento -->
+            <div class="department-header" [style.border-left-color]="dept.color">
+              <h4>{{ dept.nombre }}</h4>
+              <ion-icon name="chevron-forward-outline" class="department-arrow"></ion-icon>
+            </div>
+
+            <!-- Métricas principales -->
+            <div class="department-metrics">
+              <div class="metric-row">
+                <div class="metric-item">
+                  <span class="metric-value">{{ formatearNumero(dept.totalTickets) }}</span>
+                  <span class="metric-label">Total Tickets</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-value">{{ dept.ticketsAbiertos }}</span>
+                  <span class="metric-label">Abiertos</span>
+                </div>
+              </div>
+              
+              <div class="metric-row">
+                <div class="metric-item">
+                  <span 
+                    class="metric-value"
+                    [style.color]="obtenerColorEstado(dept.porcentajeResolucion)">
+                    {{ dept.porcentajeResolucion | number:'1.1-1' }}%
+                  </span>
+                  <span class="metric-label">% Resolución</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-value">{{ dept.tiempoPromedioResolucion | number:'1.1-1' }}d</span>
+                  <span class="metric-label">Tiempo Prom.</span>
+                </div>
+              </div>
+
+              <!-- Barra de progreso -->
+              <div class="progress-bar">
+                <div 
+                  class="progress-fill" 
+                  [style.width.%]="dept.porcentajeResolucion"
+                  [style.background-color]="dept.color">
+                </div>
+              </div>
+
+              <!-- Satisfacción -->
+              <div class="satisfaction-row">
+                <ion-icon name="star" class="star-icon"></ion-icon>
+                <span class="satisfaction-value">{{ dept.satisfaccionPromedio | number:'1.1-1' }}/10</span>
+                <span class="satisfaction-label">Satisfacción</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resumen de alertas y notificaciones -->
+      <div class="alerts-section">
+        <h2>Alertas y Notificaciones</h2>
+        
+        <div class="alerts-container">
+          <!-- Alerta de tickets vencidos -->
+          <div class="alert-card danger" *ngIf="resumenEmpresa.ticketsVencidos > 0">
+            <div class="alert-icon">
+              <ion-icon name="warning-outline"></ion-icon>
+            </div>
+            <div class="alert-content">
+              <h4>Tickets Vencidos</h4>
+              <p>{{ resumenEmpresa.ticketsVencidos }} tickets han superado el tiempo límite de resolución</p>
+              <ion-button size="small" fill="outline" color="danger">
+                Ver Detalles
+              </ion-button>
+            </div>
+          </div>
+
+          <!-- Alerta de rendimiento -->
+          <div class="alert-card warning" *ngIf="resumenEmpresa.tiempoPromedioResolucion > 5">
+            <div class="alert-icon">
+              <ion-icon name="time-outline"></ion-icon>
+            </div>
+            <div class="alert-content">
+              <h4>Tiempo de Resolución Alto</h4>
+              <p>El tiempo promedio de resolución es de {{ resumenEmpresa.tiempoPromedioResolucion | number:'1.1-1' }} días</p>
+              <ion-button size="small" fill="outline" color="warning">
+                Analizar
+              </ion-button>
+            </div>
+          </div>
+
+          <!-- Información positiva -->
+          <div class="alert-card success" *ngIf="resumenEmpresa.satisfaccionPromedio >= 8.5">
+            <div class="alert-icon">
+              <ion-icon name="checkmark-circle-outline"></ion-icon>
+            </div>
+            <div class="alert-content">
+              <h4>Excelente Satisfacción</h4>
+              <p>La satisfacción promedio es de {{ resumenEmpresa.satisfaccionPromedio | number:'1.1-1' }}/10</p>
+              <ion-button size="small" fill="outline" color="success">
+                Ver Métricas
+              </ion-button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Loading spinner -->
+  <div *ngIf="cargando" class="loading-container">
+    <ion-spinner name="crescent"></ion-spinner>
+    <p>Cargando datos...</p>
+  </div>
+
+</ion-content>

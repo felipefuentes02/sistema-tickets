@@ -1,0 +1,619 @@
+<!-- Header del componente -->
+<app-header titulo="Dashboard Completo"></app-header>
+
+<ion-content>
+  <!-- Refresher para actualizar datos -->
+  <ion-refresher slot="fixed" (ionRefresh)="refrescar($event)">
+    <ion-refresher-content
+      pullingIcon="chevron-down-outline"
+      pullingText="Desliza para actualizar"
+      refreshingSpinner="crescent"
+      refreshingText="Actualizando dashboard...">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <div class="dashboard-container">
+    <!-- Header del dashboard con información y controles -->
+    <div class="dashboard-header ion-padding">
+      <div class="header-info">
+        <h1>Dashboard Detallado</h1>
+        <p class="subtitle">Análisis completo de métricas por departamento y usuario</p>
+        <div class="last-update">
+          <ion-icon name="time-outline"></ion-icon>
+          <span>Última actualización: {{ fechaActual | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+      </div>
+      
+      <!-- Controles de período -->
+      <div class="period-controls">
+        <h4>Período de análisis:</h4>
+        <ion-segment value="{{ periodoSeleccionado }}">
+          <ion-segment-button value="semana" (click)="periodoSeleccionado = 'semana'; cargarDatosDashboard()">
+            <ion-label>Semana</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="mes" (click)="periodoSeleccionado = 'mes'; cargarDatosDashboard()">
+            <ion-label>Mes</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="año" (click)="periodoSeleccionado = 'año'; cargarDatosDashboard()">
+            <ion-label>Año</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </div>
+    </div>
+
+    <!-- Navegación de vistas -->
+    <div class="view-navigation ion-padding-horizontal">
+      <ion-segment value="{{ vistaActual }}">
+        <ion-segment-button value="general" (click)="vistaActual = 'general'">
+          <ion-icon name="analytics-outline"></ion-icon>
+          <ion-label>General</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="departamentos" (click)="vistaActual = 'departamentos'">
+          <ion-icon name="business-outline"></ion-icon>
+          <ion-label>Departamentos</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="usuarios" (click)="vistaActual = 'usuarios'">
+          <ion-icon name="people-outline"></ion-icon>
+          <ion-label>Usuarios</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="sla" (click)="vistaActual = 'sla'">
+          <ion-icon name="timer-outline"></ion-icon>
+          <ion-label>SLA</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="derivaciones" (click)="vistaActual = 'derivaciones'">
+          <ion-icon name="git-branch-outline"></ion-icon>
+          <ion-label>Derivaciones</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </div>
+
+    <!-- Contenido principal del dashboard -->
+    <div class="main-content ion-padding">
+
+      <!-- Vista General -->
+      <div *ngIf="vistaActual === 'general'" class="general-view">
+        
+        <!-- Métricas globales avanzadas -->
+        <div class="advanced-metrics-section">
+          <h2>Métricas Avanzadas del Sistema</h2>
+          
+          <div class="metrics-grid">
+            <!-- Total de tickets con distribución -->
+            <div class="metric-card large">
+              <div class="card-header">
+                <h3>Distribución Total de Tickets</h3>
+                <ion-icon name="pie-chart-outline"></ion-icon>
+              </div>
+              <div class="chart-container">
+                <!-- Gráfico de dona avanzado -->
+                <div class="advanced-donut-chart">
+                  <div class="chart-center">
+                    <span class="total-number">{{ formatearNumero(totalTickets) }}</span>
+                    <span class="total-label">Total Tickets</span>
+                  </div>
+                </div>
+                <div class="distribution-legend">
+                  <div *ngFor="let dept of metricasDetalladas" class="legend-item">
+                    <span class="legend-color" [style.background-color]="dept.color"></span>
+                    <span class="legend-text">{{ dept.nombre }}: {{ dept.totalTickets }}</span>
+                    <span class="legend-percentage">{{ calcularPorcentaje(dept.totalTickets, totalTickets) }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tendencia temporal avanzada -->
+            <div class="metric-card large">
+              <div class="card-header">
+                <h3>Tendencia Temporal</h3>
+                <ion-icon name="trending-up-outline"></ion-icon>
+              </div>
+              <div class="chart-container">
+                <!-- Gráfico de líneas múltiples -->
+                <div class="multi-line-chart">
+                  <div class="chart-area">
+                    <div *ngFor="let punto of tendenciaAvanzada; let i = index" class="data-point">
+                      <div class="bars-group">
+                        <div class="bar creados" [style.height.px]="(punto.creados / 600) * 120"></div>
+                        <div class="bar resueltos" [style.height.px]="(punto.resueltos / 600) * 120"></div>
+                        <div class="bar pendientes" [style.height.px]="(punto.pendientes / 60) * 120"></div>
+                      </div>
+                      <span class="period-label">{{ punto.periodo.substring(0, 3) }}</span>
+                    </div>
+                  </div>
+                  <div class="chart-legend">
+                    <div class="legend-item">
+                      <span class="legend-color" style="background-color: #3498db;"></span>
+                      <span class="legend-text">Creados</span>
+                    </div>
+                    <div class="legend-item">
+                      <span class="legend-color" style="background-color: #2ecc71;"></span>
+                      <span class="legend-text">Resueltos</span>
+                    </div>
+                    <div class="legend-item">
+                      <span class="legend-color" style="background-color: #f39c12;"></span>
+                      <span class="legend-text">Pendientes</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Métricas de eficiencia -->
+            <div class="metric-card medium">
+              <div class="card-header">
+                <h3>Eficiencia Global</h3>
+                <ion-icon name="speedometer-outline"></ion-icon>
+              </div>
+              <div class="efficiency-metrics">
+                <div class="efficiency-item">
+                  <span class="metric-value">{{ eficienciaPromedio | number:'1.1-1' }}%</span>
+                  <span class="metric-label">Eficiencia Promedio</span>
+                </div>
+                <div class="efficiency-item">
+                  <span class="metric-value">{{ tiempoPromedioResolucion | number:'1.1-1' }}d</span>
+                  <span class="metric-label">Tiempo Promedio</span>
+                </div>
+                <div class="efficiency-item">
+                  <span class="metric-value">{{ satisfaccionPromedio | number:'1.1-1' }}/10</span>
+                  <span class="metric-label">Satisfacción</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tickets por estado detallado -->
+            <div class="metric-card medium">
+              <div class="card-header">
+                <h3>Estados Detallados</h3>
+                <ion-icon name="list-outline"></ion-icon>
+              </div>
+              <div class="status-breakdown">
+                <div class="status-item">
+                  <span class="status-label">Abiertos</span>
+                  <span class="status-value">{{ formatearNumero(totalTicketsAbiertos) }}</span>
+                  <div class="status-bar">
+                    <div class="status-fill" [style.width.%]="calcularPorcentaje(totalTicketsAbiertos, totalTickets)" style="background-color: #3498db;"></div>
+                  </div>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">Pendientes</span>
+                  <span class="status-value">{{ formatearNumero(totalTicketsPendientes) }}</span>
+                  <div class="status-bar">
+                    <div class="status-fill" [style.width.%]="calcularPorcentaje(totalTicketsPendientes, totalTickets)" style="background-color: #f39c12;"></div>
+                  </div>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">Vencidos</span>
+                  <span class="status-value">{{ formatearNumero(totalTicketsVencidos) }}</span>
+                  <div class="status-bar">
+                    <div class="status-fill" [style.width.%]="calcularPorcentaje(totalTicketsVencidos, totalTickets)" style="background-color: #e74c3c;"></div>
+                  </div>
+                </div>
+                <div class="status-item">
+                  <span class="status-label">Derivados</span>
+                  <span class="status-value">{{ formatearNumero(totalTicketsDerivados) }}</span>
+                  <div class="status-bar">
+                    <div class="status-fill" [style.width.%]="calcularPorcentaje(totalTicketsDerivados, totalTickets)" style="background-color: #9b59b6;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vista por Departamentos -->
+      <div *ngIf="vistaActual === 'departamentos'" class="departments-view">
+        <h2>Análisis Detallado por Departamento</h2>
+        
+        <div class="departments-detailed-grid">
+          <div 
+            *ngFor="let dept of metricasDetalladas" 
+            class="department-detailed-card"
+            (click)="seleccionarDepartamento(dept.id)">
+            
+            <!-- Header del departamento -->
+            <div class="dept-header" [style.border-left-color]="dept.color">
+              <h3>{{ dept.nombre }}</h3>
+              <div class="dept-users">
+                <ion-icon name="people-outline"></ion-icon>
+                <span>{{ dept.usuariosActivos }} usuarios</span>
+              </div>
+            </div>
+
+            <!-- Métricas principales -->
+            <div class="dept-main-metrics">
+              <div class="metric-row">
+                <div class="metric-item">
+                  <span class="metric-value">{{ formatearNumero(dept.totalTickets) }}</span>
+                  <span class="metric-label">Total</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-value" [style.color]="obtenerColorEstado(dept.eficienciaResolucion)">{{ dept.eficienciaResolucion | number:'1.1-1' }}%</span>
+                  <span class="metric-label">Eficiencia</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Distribución detallada -->
+            <div class="dept-distribution">
+              <h4>Distribución de Estados</h4>
+              <div class="distribution-items">
+                <div class="dist-item">
+                  <span class="dist-label">Abiertos</span>
+                  <span class="dist-value">{{ dept.ticketsAbiertos }}</span>
+                  <div class="dist-bar">
+                    <div class="dist-fill" [style.width.%]="calcularPorcentaje(dept.ticketsAbiertos, dept.totalTickets)" style="background-color: #3498db;"></div>
+                  </div>
+                </div>
+                <div class="dist-item">
+                  <span class="dist-label">Pendientes</span>
+                  <span class="dist-value">{{ dept.ticketsPendientes }}</span>
+                  <div class="dist-bar">
+                    <div class="dist-fill" [style.width.%]="calcularPorcentaje(dept.ticketsPendientes, dept.totalTickets)" style="background-color: #f39c12;"></div>
+                  </div>
+                </div>
+                <div class="dist-item">
+                  <span class="dist-label">Vencidos</span>
+                  <span class="dist-value">{{ dept.ticketsVencidos }}</span>
+                  <div class="dist-bar">
+                    <div class="dist-fill" [style.width.%]="calcularPorcentaje(dept.ticketsVencidos, dept.totalTickets)" style="background-color: #e74c3c;"></div>
+                  </div>
+                </div>
+                <div class="dist-item">
+                  <span class="dist-label">Derivados</span>
+                  <span class="dist-value">{{ dept.ticketsDerivados }}</span>
+                  <div class="dist-bar">
+                    <div class="dist-fill" [style.width.%]="calcularPorcentaje(dept.ticketsDerivados, dept.totalTickets)" style="background-color: #9b59b6;"></div>
+                  </div>
+                </div>
+                <div class="dist-item">
+                  <span class="dist-label">Escalados</span>
+                  <span class="dist-value">{{ dept.ticketsEscalados }}</span>
+                  <div class="dist-bar">
+                    <div class="dist-fill" [style.width.%]="calcularPorcentaje(dept.ticketsEscalados, dept.totalTickets)" style="background-color: #e67e22;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Métricas de rendimiento -->
+            <div class="dept-performance">
+              <div class="perf-item">
+                <ion-icon name="time-outline"></ion-icon>
+                <div class="perf-content">
+                  <span class="perf-value">{{ dept.tiempoPromedioResolucion | number:'1.1-1' }}d</span>
+                  <span class="perf-label">Tiempo Resolución</span>
+                </div>
+              </div>
+              <div class="perf-item">
+                <ion-icon name="flash-outline"></ion-icon>
+                <div class="perf-content">
+                  <span class="perf-value">{{ dept.tiempoPromedioRespuesta | number:'1.1-1' }}d</span>
+                  <span class="perf-label">Tiempo Respuesta</span>
+                </div>
+              </div>
+              <div class="perf-item">
+                <ion-icon name="star-outline"></ion-icon>
+                <div class="perf-content">
+                  <span class="perf-value">{{ dept.satisfaccionPromedio | number:'1.1-1' }}/10</span>
+                  <span class="perf-label">Satisfacción</span>
+                </div>
+              </div>
+              <div class="perf-item">
+                <ion-icon name="trending-up-outline"></ion-icon>
+                <div class="perf-content">
+                  <span class="perf-value">{{ dept.cargaTrabajo | number:'1.1-1' }}%</span>
+                  <span class="perf-label">Carga Trabajo</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Indicador de click -->
+            <div class="click-indicator">
+              <ion-icon name="chevron-forward-outline"></ion-icon>
+              <span>Ver usuarios del departamento</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vista de Usuarios -->
+      <div *ngIf="vistaActual === 'usuarios'" class="users-view">
+        <div class="users-header">
+          <h2>Análisis por Usuario</h2>
+          <div class="users-controls">
+            <!-- Chip del departamento seleccionado -->
+            <div *ngIf="departamentoSeleccionado" class="selected-dept">
+              <ion-chip color="primary">
+                <ion-icon name="business-outline"></ion-icon>
+                <ion-label>{{ nombreDepartamentoSeleccionado }}</ion-label>
+                <ion-icon name="close-outline" (click)="quitarFiltroDepartamento()"></ion-icon>
+              </ion-chip>
+            </div>
+            
+            <!-- Botón para mostrar todos los usuarios -->
+            <div *ngIf="departamentoSeleccionado" class="show-all-users">
+              <ion-button 
+                fill="outline" 
+                size="small" 
+                color="medium"
+                (click)="quitarFiltroDepartamento()">
+                <ion-icon name="eye-outline" slot="start"></ion-icon>
+                Mostrar Todos los Usuarios
+              </ion-button>
+            </div>
+            
+            <!-- Información cuando no hay filtro -->
+            <div *ngIf="!departamentoSeleccionado" class="all-users-info">
+              <ion-chip color="success" fill="outline">
+                <ion-icon name="checkmark-circle-outline"></ion-icon>
+                <ion-label>Mostrando todos los departamentos</ion-label>
+              </ion-chip>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mostrar usuarios del departamento seleccionado o todos -->
+        <div class="users-grid" *ngIf="departamentoSeleccionado; else allUsersTemplate">
+          <div 
+            *ngFor="let usuario of obtenerUsuariosDepartamento()" 
+            class="user-card"
+            (click)="verDetalleUsuario(usuario)">
+            
+            <div class="user-header">
+              <div class="user-avatar">
+                <span>{{ obtenerIniciales(usuario.nombreCompleto) }}</span>
+              </div>
+              <div class="user-info">
+                <h4>{{ usuario.nombreCompleto }}</h4>
+                <p>{{ usuario.correo }}</p>
+              </div>
+            </div>
+
+            <div class="user-metrics">
+              <div class="user-metric">
+                <span class="metric-value">{{ usuario.ticketsAsignados }}</span>
+                <span class="metric-label">Asignados</span>
+              </div>
+              <div class="user-metric">
+                <span class="metric-value">{{ usuario.ticketsResueltos }}</span>
+                <span class="metric-label">Resueltos</span>
+              </div>
+              <div class="user-metric">
+                <span class="metric-value">{{ usuario.ticketsPendientes }}</span>
+                <span class="metric-label">Pendientes</span>
+              </div>
+            </div>
+
+            <div class="user-performance">
+              <div class="performance-item">
+                <span class="performance-label">Eficiencia</span>
+                <div class="performance-bar">
+                  <div class="performance-fill" [style.width.%]="usuario.eficiencia" [style.background-color]="obtenerColorEstado(usuario.eficiencia)"></div>
+                </div>
+                <span class="performance-value">{{ usuario.eficiencia | number:'1.0-0' }}%</span>
+              </div>
+              <div class="performance-item">
+                <span class="performance-label">Tiempo Prom.</span>
+                <span class="performance-value">{{ usuario.tiempoPromedioResolucion | number:'1.1-1' }}d</span>
+              </div>
+              <div class="performance-item">
+                <span class="performance-label">Satisfacción</span>
+                <span class="performance-value">{{ usuario.satisfaccionPromedio | number:'1.1-1' }}/10</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Template para mostrar todos los usuarios -->
+        <ng-template #allUsersTemplate>
+          <div class="all-users-section">
+            <div *ngFor="let dept of metricasDetalladas" class="department-users-section">
+              <h3>{{ dept.nombre }}</h3>
+              <div class="users-grid">
+                <div 
+                  *ngFor="let usuario of usuariosPorDepartamento[dept.nombre] || []" 
+                  class="user-card compact"
+                  (click)="verDetalleUsuario(usuario)">
+                  
+                  <div class="user-header compact">
+                    <div class="user-avatar small">
+                      <span>{{ obtenerIniciales(usuario.nombreCompleto) }}</span>
+                    </div>
+                    <div class="user-info">
+                      <h5>{{ usuario.nombreCompleto.split(' ').slice(0, 2).join(' ') }}</h5>
+                    </div>
+                  </div>
+
+                  <div class="user-metrics compact">
+                    <span>{{ usuario.ticketsAsignados }} / {{ usuario.ticketsResueltos }}</span>
+                    <span class="efficiency" [style.color]="obtenerColorEstado(usuario.eficiencia)">{{ usuario.eficiencia | number:'1.0-0' }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-template>
+      </div>
+
+      <!-- Vista de SLA -->
+      <div *ngIf="vistaActual === 'sla'" class="sla-view">
+        <h2>Análisis de Cumplimiento SLA</h2>
+        
+        <div class="sla-grid">
+          <div *ngFor="let sla of analisisSLA" class="sla-card">
+            <div class="sla-header">
+              <h3>{{ sla.departamento }}</h3>
+              <div class="sla-percentage" [style.color]="obtenerColorEstado(sla.cumplimientoSLA)">
+                {{ sla.cumplimientoSLA | number:'1.1-1' }}%
+              </div>
+            </div>
+
+            <div class="sla-metrics">
+              <div class="sla-metric">
+                <span class="sla-label">Dentro de SLA</span>
+                <span class="sla-value success">{{ formatearNumero(sla.ticketsDentroSLA) }}</span>
+              </div>
+              <div class="sla-metric">
+                <span class="sla-label">Fuera de SLA</span>
+                <span class="sla-value danger">{{ formatearNumero(sla.ticketsFueraSLA) }}</span>
+              </div>
+              <div class="sla-metric">
+                <span class="sla-label">Tiempo Promedio</span>
+                <span class="sla-value">{{ sla.tiempoPromedio | number:'1.1-1' }}d</span>
+              </div>
+              <div class="sla-metric">
+                <span class="sla-label">Límite SLA</span>
+                <span class="sla-value">{{ sla.tiempoLimite | number:'1.1-1' }}d</span>
+              </div>
+            </div>
+
+            <div class="sla-progress">
+              <div class="progress-bar">
+                <div class="progress-fill success" [style.width.%]="sla.cumplimientoSLA"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vista de Derivaciones -->
+      <div *ngIf="vistaActual === 'derivaciones'" class="derivations-view">
+        <h2>Análisis de Derivaciones por Departamento</h2>
+        <p class="view-description">
+          Tiempo de derivación: período desde que el ticket llega al departamento hasta que es derivado a otro departamento.
+        </p>
+        
+        <div class="derivations-grid">
+          <div *ngFor="let dept of derivacionesPorDepartamento" class="derivation-department-card">
+            
+            <!-- Header del departamento -->
+            <div class="dept-header">
+              <h3>{{ dept.departamento }}</h3>
+              <div class="dept-summary">
+                <span class="total-derivados">{{ dept.totalDerivados }} derivados</span>
+              </div>
+            </div>
+
+            <!-- Métricas principales del departamento -->
+            <div class="dept-main-metrics">
+              <div class="metric-item">
+                <span class="metric-value">{{ dept.totalDerivados }}</span>
+                <span class="metric-label">Total Derivados</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-value">{{ dept.tiempoPromedioDerivacion | number:'1.1-1' }}d</span>
+                <span class="metric-label">Tiempo de Derivación</span>
+              </div>
+            </div>
+
+            <!-- Barra de progreso general -->
+            <div class="dept-progress">
+              <div class="progress-label">
+                <span>Eficiencia de Derivación</span>
+                <span class="progress-value">{{ obtenerEficienciaDerivacion(dept.tiempoPromedioDerivacion) }}%</span>
+              </div>
+              <div class="progress-bar">
+                <div 
+                  class="progress-fill" 
+                  [style.width.%]="obtenerEficienciaDerivacion(dept.tiempoPromedioDerivacion)"
+                  [style.background-color]="obtenerColorEficienciaDerivacion(dept.tiempoPromedioDerivacion)">
+                </div>
+              </div>
+            </div>
+
+            <!-- Lista de derivaciones a otros departamentos -->
+            <div class="derivations-list">
+              <h4>Derivaciones a:</h4>
+              <div class="derivation-items">
+                <div *ngFor="let derivacion of dept.derivacionesA" class="derivation-item">
+                  
+                  <!-- Departamento destino -->
+                  <div class="derivation-header">
+                    <div class="destination-dept">
+                      <ion-icon name="arrow-forward-outline"></ion-icon>
+                      <span class="dept-name">{{ derivacion.departamentoDestino }}</span>
+                    </div>
+                    <div class="derivation-count">
+                      <span class="count">{{ derivacion.cantidad }}</span>
+                      <span class="percentage">({{ derivacion.porcentaje | number:'1.0-0' }}%)</span>
+                    </div>
+                  </div>
+
+                  <!-- Tiempo promedio -->
+                  <div class="derivation-metrics">
+                    <div class="time-metric">
+                      <ion-icon name="time-outline"></ion-icon>
+                      <span>{{ derivacion.tiempoPromedio | number:'1.1-1' }}d promedio</span>
+                    </div>
+                  </div>
+
+                  <!-- Barra de proporción -->
+                  <div class="derivation-proportion">
+                    <div class="proportion-bar">
+                      <div 
+                        class="proportion-fill" 
+                        [style.width.%]="derivacion.porcentaje"
+                        [style.background-color]="obtenerColorPorcentaje(derivacion.porcentaje)">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Indicadores de estado -->
+            <div class="dept-status">
+              <div class="status-indicator" 
+                   [class.good]="dept.tiempoPromedioDerivacion <= 1"
+                   [class.warning]="dept.tiempoPromedioDerivacion > 1 && dept.tiempoPromedioDerivacion <= 2"
+                   [class.danger]="dept.tiempoPromedioDerivacion > 2">
+                
+                <ion-icon 
+                  [name]="dept.tiempoPromedioDerivacion <= 1 ? 'checkmark-circle-outline' : dept.tiempoPromedioDerivacion <= 2 ? 'warning-outline' : 'alert-circle-outline'">
+                </ion-icon>
+                
+                <span *ngIf="dept.tiempoPromedioDerivacion <= 1">Derivación Eficiente</span>
+                <span *ngIf="dept.tiempoPromedioDerivacion > 1 && dept.tiempoPromedioDerivacion <= 2">Derivación Moderada</span>
+                <span *ngIf="dept.tiempoPromedioDerivacion > 2">Derivación Lenta</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Resumen global de derivaciones -->
+        <div class="derivations-summary">
+          <h3>Resumen Global</h3>
+          <div class="summary-cards">
+            <div class="summary-card">
+              <span class="summary-value">{{ obtenerTotalDerivaciones() }}</span>
+              <span class="summary-label">Total Derivaciones</span>
+            </div>
+            <div class="summary-card">
+              <span class="summary-value">{{ obtenerTiempoPromedioGlobal() | number:'1.1-1' }}d</span>
+              <span class="summary-label">Tiempo Promedio Global</span>
+            </div>
+            <div class="summary-card">
+              <span class="summary-value">{{ obtenerDepartamentoMasEficiente() }}</span>
+              <span class="summary-label">Más Eficiente</span>
+            </div>
+            <div class="summary-card">
+              <span class="summary-value">{{ obtenerDepartamentoMenosEficiente() }}</span>
+              <span class="summary-label">Menos Eficiente</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Loading spinner -->
+  <div *ngIf="cargando" class="loading-container">
+    <ion-spinner name="crescent"></ion-spinner>
+    <p>Cargando dashboard detallado...</p>
+  </div>
+
+</ion-content>
