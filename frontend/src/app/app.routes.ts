@@ -1,3 +1,10 @@
+/**
+ * Archivo: frontend/src/app/app.routes.ts
+ * Descripción: Configuración de rutas de la aplicación corregida
+ * Autor: Sistema de Gestión de Tickets
+ * Fecha: 2025
+ */
+
 import { Routes } from '@angular/router';
 import { AuthGuard } from './guards/auth.guard';
 import { RoleGuard } from './guards/role.guard';
@@ -71,10 +78,6 @@ export const routes: Routes = [
   },
   {
     path: 'admin-dashboard',
-    loadComponent: () => import('./pages/admin-dashboard/admin-dashboard.page').then( m => m.AdminDashboardPage)
-  },
-  {
-    path: 'admin-dashboard',
     loadComponent: () => import('./pages/admin-dashboard/admin-dashboard.page').then(m => m.AdminDashboardPage),
     canActivate: [AuthGuard, AdminGuard],
     data: { 
@@ -82,7 +85,6 @@ export const routes: Routes = [
       descripcion: 'Métricas detalladas de la empresa'
     }
   },
-  /*
   {
     path: 'admin-usuarios',
     loadComponent: () => import('./pages/admin-usuarios/admin-usuarios.page').then(m => m.AdminUsuariosPage),
@@ -91,7 +93,7 @@ export const routes: Routes = [
       titulo: 'Gestión de Usuarios',
       descripcion: 'Administrar usuarios del sistema'
     }
-  },
+  }/*,
   {
     path: 'admin-usuarios/crear',
     loadComponent: () => import('./pages/admin-usuarios/crear-usuario/crear-usuario.page').then(m => m.CrearUsuarioPage),
@@ -136,5 +138,11 @@ export const routes: Routes = [
       titulo: 'Detalle Departamento',
       descripcion: 'Métricas detalladas del departamento'
     }
+  },
+  
+  // ============ RUTA WILDCARD (DEBE IR AL FINAL) ============
+  {
+    path: '**',
+    redirectTo: '/login'
   }*/
 ];
