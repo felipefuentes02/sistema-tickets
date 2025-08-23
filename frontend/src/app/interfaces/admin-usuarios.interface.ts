@@ -68,6 +68,16 @@ export interface FiltrosUsuario {
 }
 
 export interface ErroresValidacion {
+  // ✅ Campos usando nomenclatura del modelo de BD (los que faltan)
+  primer_nombre?: string;
+  segundo_nombre?: string;
+  primer_apellido?: string;
+  segundo_apellido?: string;
+  correo?: string;
+  contrasena?: string;
+  confirmarContrasena?: string;
+  
+  // ✅ Mantener campos existentes para compatibilidad
   nombre?: string;
   email?: string;
   rut?: string;

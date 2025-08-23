@@ -93,16 +93,17 @@ export const routes: Routes = [
       titulo: 'Gestión de Usuarios',
       descripcion: 'Administrar usuarios del sistema'
     }
-  }/*,
-  {
-    path: 'admin-usuarios/crear',
-    loadComponent: () => import('./pages/admin-usuarios/crear-usuario/crear-usuario.page').then(m => m.CrearUsuarioPage),
-    canActivate: [AuthGuard, AdminGuard],
-    data: { 
-      titulo: 'Crear Usuario',
-      descripcion: 'Formulario para crear nuevo usuario'
-    }
   },
+  {
+  path: 'admin-usuarios/crear',
+  loadComponent: () => import('./pages/admin-usuarios/crear-usuario/crear-usuario.page').then(m => m.CrearUsuarioPage),
+  canActivate: [AuthGuard, AdminGuard],
+  data: { 
+    titulo: 'Crear Usuario',
+    descripcion: 'Formulario para crear nuevo usuario'
+  }
+ }
+/*,
   {
     path: 'admin-usuarios/editar/:id',
     loadComponent: () => import('./pages/admin-usuarios/editar-usuario/editar-usuario.page').then(m => m.EditarUsuarioPage),

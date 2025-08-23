@@ -1,7 +1,10 @@
 <ion-header [translucent]="true">
   <ion-toolbar color="primary">
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/admin-usuarios"></ion-back-button>
+      <ion-back-button 
+        defaultHref="/admin-usuarios" 
+        (click)="volver()">
+      </ion-back-button>
     </ion-buttons>
     <ion-title>Crear Nuevo Usuario</ion-title>
   </ion-toolbar>
@@ -9,7 +12,7 @@
 
 <ion-content [fullscreen]="true" class="ion-padding">
   
-  <!-- Encabezado -->
+  <!-- Encabezado de la página -->
   <div class="header-section mb-4">
     <div class="d-flex align-items-center mb-3">
       <ion-icon name="person-add-outline" size="large" class="me-3 text-primary"></ion-icon>
@@ -20,10 +23,10 @@
     </div>
   </div>
 
-  <!-- Formulario de creación -->
-  <form [formGroup]="formularioUsuario" (ngSubmit)="onSubmit()">
+  <!-- Formulario principal -->
+  <form [formGroup]="formularioUsuario" (ngSubmit)="onSubmit()" *ngIf="!cargando">
     
-    <!-- Información Personal -->
+    <!-- SECCIÓN: Información Personal -->
     <ion-card class="form-section">
       <ion-card-header>
         <ion-card-title>
@@ -38,61 +41,127 @@
       <ion-card-content>
         <div class="row">
           
-          <!-- Campo Nombre -->
+          <!-- Campo: Primer Nombre -->
           <div class="col-md-6 col-12 mb-3">
             <ion-item 
               fill="outline" 
-              [class.ion-invalid]="tieneError('nombre')"
-              [class.ion-valid]="!tieneError('nombre') && formularioUsuario.get('nombre')?.touched">
+              [class.ion-invalid]="errores.primer_nombre"
+              [class.ion-valid]="!errores.primer_nombre && formularioUsuario.get('primer_nombre')?.touched">
               <ion-label position="stacked">
-                Nombre Completo <span class="text-danger">*</span>
+                Primer Nombre <span class="text-danger">*</span>
               </ion-label>
               <ion-input 
-                formControlName="nombre"
-                placeholder="Ingresa el nombre completo"
+                formControlName="primer_nombre"
+                placeholder="Ingresa el primer nombre"
                 (ionBlur)="onCampoFormulario()"
                 clearInput="true">
               </ion-input>
               <ion-note slot="helper">
-                Solo letras y espacios, mínimo 2 caracteres
+                Solo letras, mínimo 2 caracteres, máximo 25
               </ion-note>
-              <ion-note slot="error" *ngIf="tieneError('nombre')">
-                {{ obtenerMensajeError('nombre') }}
+              <ion-note slot="error" *ngIf="errores.primer_nombre">
+                {{ errores.primer_nombre }}
               </ion-note>
             </ion-item>
           </div>
 
-          <!-- Campo Email -->
+          <!-- Campo: Segundo Nombre (Opcional) -->
           <div class="col-md-6 col-12 mb-3">
             <ion-item 
               fill="outline" 
-              [class.ion-invalid]="tieneError('email')"
-              [class.ion-valid]="!tieneError('email') && formularioUsuario.get('email')?.touched">
+              [class.ion-invalid]="errores.segundo_nombre"
+              [class.ion-valid]="!errores.segundo_nombre && formularioUsuario.get('segundo_nombre')?.touched">
               <ion-label position="stacked">
-                Correo Electrónico <span class="text-danger">*</span>
+                Segundo Nombre <span class="text-muted">(Opcional)</span>
               </ion-label>
               <ion-input 
-                formControlName="email"
-                type="email"
-                placeholder="usuario@empresa.com"
+                formControlName="segundo_nombre"
+                placeholder="Ingresa el segundo nombre"
                 (ionBlur)="onCampoFormulario()"
                 clearInput="true">
               </ion-input>
               <ion-note slot="helper">
-                Se verificará que no esté en uso
+                Solo letras, máximo 25 caracteres
               </ion-note>
-              <ion-note slot="error" *ngIf="tieneError('email')">
-                {{ obtenerMensajeError('email') }}
+              <ion-note slot="error" *ngIf="errores.segundo_nombre">
+                {{ errores.segundo_nombre }}
               </ion-note>
             </ion-item>
           </div>
 
-          <!-- Campo RUT -->
+          <!-- Campo: Primer Apellido -->
           <div class="col-md-6 col-12 mb-3">
             <ion-item 
               fill="outline" 
-              [class.ion-invalid]="tieneError('rut')"
-              [class.ion-valid]="!tieneError('rut') && formularioUsuario.get('rut')?.touched">
+              [class.ion-invalid]="errores.primer_apellido"
+              [class.ion-valid]="!errores.primer_apellido && formularioUsuario.get('primer_apellido')?.touched">
+              <ion-label position="stacked">
+                Primer Apellido <span class="text-danger">*</span>
+              </ion-label>
+              <ion-input 
+                formControlName="primer_apellido"
+                placeholder="Ingresa el primer apellido"
+                (ionBlur)="onCampoFormulario()"
+                clearInput="true">
+              </ion-input>
+              <ion-note slot="helper">
+                Solo letras, mínimo 2 caracteres, máximo 25
+              </ion-note>
+              <ion-note slot="error" *ngIf="errores.primer_apellido">
+                {{ errores.primer_apellido }}
+              </ion-note>
+            </ion-item>
+          </div>
+
+          <!-- Campo: Segundo Apellido -->
+          <div class="col-md-6 col-12 mb-3">
+            <ion-item 
+              fill="outline" 
+              [class.ion-invalid]="errores.segundo_apellido"
+              [class.ion-valid]="!errores.segundo_apellido && formularioUsuario.get('segundo_apellido')?.touched">
+              <ion-label position="stacked">
+                Segundo Apellido <span class="text-danger">*</span>
+              </ion-label>
+              <ion-input 
+                formControlName="segundo_apellido"
+                placeholder="Ingresa el segundo apellido"
+                (ionBlur)="onCampoFormulario()"
+                clearInput="true">
+              </ion-input>
+              <ion-note slot="helper">
+                Solo letras, mínimo 2 caracteres, máximo 25
+              </ion-note>
+              <ion-note slot="error" *ngIf="errores.segundo_apellido">
+                {{ errores.segundo_apellido }}
+              </ion-note>
+            </ion-item>
+          </div>
+          
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- SECCIÓN: Información de Contacto -->
+    <ion-card class="form-section">
+      <ion-card-header>
+        <ion-card-title>
+          <ion-icon name="mail-outline" class="me-2"></ion-icon>
+          Información de Contacto
+        </ion-card-title>
+        <ion-card-subtitle>
+          Datos de contacto y acceso
+        </ion-card-subtitle>
+      </ion-card-header>
+
+      <ion-card-content>
+        <div class="row">
+          
+          <!-- Campo: RUT -->
+          <div class="col-md-6 col-12 mb-3">
+            <ion-item 
+              fill="outline" 
+              [class.ion-invalid]="errores.rut"
+              [class.ion-valid]="!errores.rut && formularioUsuario.get('rut')?.touched">
               <ion-label position="stacked">
                 RUT <span class="text-danger">*</span>
               </ion-label>
@@ -103,126 +172,139 @@
                 clearInput="true">
               </ion-input>
               <ion-note slot="helper">
-                Se formateará automáticamente
+                Formato: 12345678-9
               </ion-note>
-              <ion-note slot="error" *ngIf="tieneError('rut')">
-                {{ obtenerMensajeError('rut') }}
+              <ion-note slot="error" *ngIf="errores.rut">
+                {{ errores.rut }}
               </ion-note>
             </ion-item>
           </div>
+
+          <!-- Campo: Correo Electrónico -->
+          <div class="col-md-6 col-12 mb-3">
+            <ion-item 
+              fill="outline" 
+              [class.ion-invalid]="errores.correo"
+              [class.ion-valid]="!errores.correo && formularioUsuario.get('correo')?.touched">
+              <ion-label position="stacked">
+                Correo Electrónico <span class="text-danger">*</span>
+              </ion-label>
+              <ion-input 
+                formControlName="correo"
+                type="email"
+                placeholder="correo@ejemplo.com"
+                (ionBlur)="onCampoFormulario()"
+                clearInput="true">
+              </ion-input>
+              <ion-note slot="helper">
+                Debe ser un correo válido, máximo 80 caracteres
+              </ion-note>
+              <ion-note slot="error" *ngIf="errores.correo">
+                {{ errores.correo }}
+              </ion-note>
+            </ion-item>
+          </div>
+          
         </div>
       </ion-card-content>
     </ion-card>
 
-    <!-- Configuración de Acceso -->
+    <!-- SECCIÓN: Seguridad -->
     <ion-card class="form-section">
       <ion-card-header>
         <ion-card-title>
-          <ion-icon name="key-outline" class="me-2"></ion-icon>
-          Configuración de Acceso
+          <ion-icon name="lock-closed-outline" class="me-2"></ion-icon>
+          Seguridad
         </ion-card-title>
         <ion-card-subtitle>
-          Contraseña y permisos del usuario
+          Configuración de contraseña
         </ion-card-subtitle>
       </ion-card-header>
 
       <ion-card-content>
         <div class="row">
           
-          <!-- Campo Contraseña -->
+          <!-- Campo: Contraseña -->
           <div class="col-md-6 col-12 mb-3">
             <ion-item 
               fill="outline" 
-              [class.ion-invalid]="tieneError('password')"
-              [class.ion-valid]="!tieneError('password') && formularioUsuario.get('password')?.touched">
+              [class.ion-invalid]="errores.contrasena"
+              [class.ion-valid]="!errores.contrasena && formularioUsuario.get('contrasena')?.touched">
               <ion-label position="stacked">
                 Contraseña <span class="text-danger">*</span>
               </ion-label>
               <ion-input 
-                formControlName="password"
+                formControlName="contrasena"
                 type="password"
-                placeholder="Contraseña segura"
+                placeholder="Ingresa una contraseña segura"
                 (ionBlur)="onCampoFormulario()">
               </ion-input>
               <ion-note slot="helper">
-                Mínimo 8 caracteres, debe incluir mayúsculas, minúsculas, números y símbolos
+                Mínimo 8 caracteres, incluir mayúscula, minúscula, número y carácter especial
               </ion-note>
-              <ion-note slot="error" *ngIf="tieneError('password')">
-                {{ obtenerMensajeError('password') }}
+              <ion-note slot="error" *ngIf="errores.contrasena">
+                {{ errores.contrasena }}
               </ion-note>
             </ion-item>
-
-            <!-- Indicador de fortaleza de contraseña -->
-            <div *ngIf="formularioUsuario.get('password')?.value" class="password-strength mt-2">
-              <div class="d-flex justify-content-between align-items-center mb-1">
-                <small class="text-muted">Fortaleza de la contraseña:</small>
-                <small [class]="'text-' + evaluarFortalezaPassword().color">
-                  {{ evaluarFortalezaPassword().nivel }}
-                </small>
-              </div>
-              <ion-progress-bar 
-                [value]="evaluarFortalezaPassword().porcentaje / 100"
-                [color]="evaluarFortalezaPassword().color">
-              </ion-progress-bar>
-            </div>
           </div>
 
-          <!-- Campo Confirmar Contraseña -->
+          <!-- Campo: Confirmar Contraseña -->
           <div class="col-md-6 col-12 mb-3">
             <ion-item 
               fill="outline" 
-              [class.ion-invalid]="tieneError('confirmarPassword')"
-              [class.ion-valid]="!tieneError('confirmarPassword') && formularioUsuario.get('confirmarPassword')?.touched">
+              [class.ion-invalid]="errores.confirmarContrasena"
+              [class.ion-valid]="!errores.confirmarContrasena && formularioUsuario.get('confirmarContrasena')?.touched">
               <ion-label position="stacked">
                 Confirmar Contraseña <span class="text-danger">*</span>
               </ion-label>
               <ion-input 
-                formControlName="confirmarPassword"
+                formControlName="confirmarContrasena"
                 type="password"
-                placeholder="Repite la contraseña"
+                placeholder="Confirma la contraseña"
                 (ionBlur)="onCampoFormulario()">
               </ion-input>
               <ion-note slot="helper">
                 Debe coincidir con la contraseña anterior
               </ion-note>
-              <ion-note slot="error" *ngIf="tieneError('confirmarPassword')">
-                {{ obtenerMensajeError('confirmarPassword') }}
+              <ion-note slot="error" *ngIf="errores.confirmarContrasena">
+                {{ errores.confirmarContrasena }}
               </ion-note>
             </ion-item>
           </div>
+          
         </div>
       </ion-card-content>
     </ion-card>
 
-    <!-- Asignación Organizacional -->
+    <!-- SECCIÓN: Información Organizacional -->
     <ion-card class="form-section">
       <ion-card-header>
         <ion-card-title>
           <ion-icon name="business-outline" class="me-2"></ion-icon>
-          Asignación Organizacional
+          Información Organizacional
         </ion-card-title>
         <ion-card-subtitle>
-          Departamento y rol del usuario en el sistema
+          Departamento y rol del usuario
         </ion-card-subtitle>
       </ion-card-header>
 
       <ion-card-content>
         <div class="row">
           
-          <!-- Campo Departamento -->
+          <!-- Campo: Departamento -->
           <div class="col-md-6 col-12 mb-3">
             <ion-item 
               fill="outline" 
-              [class.ion-invalid]="tieneError('id_departamento')"
-              [class.ion-valid]="!tieneError('id_departamento') && formularioUsuario.get('id_departamento')?.touched">
+              [class.ion-invalid]="errores.id_departamento"
+              [class.ion-valid]="!errores.id_departamento && formularioUsuario.get('id_departamento')?.touched">
               <ion-label position="stacked">
                 Departamento <span class="text-danger">*</span>
               </ion-label>
               <ion-select 
                 formControlName="id_departamento"
                 placeholder="Selecciona un departamento"
-                interface="popover"
-                (ionBlur)="onCampoFormulario()">
+                (ionChange)="onCampoFormulario()"
+                interface="popover">
                 <ion-select-option 
                   *ngFor="let departamento of departamentos" 
                   [value]="departamento.id">
@@ -232,26 +314,26 @@
               <ion-note slot="helper">
                 Departamento al que pertenecerá el usuario
               </ion-note>
-              <ion-note slot="error" *ngIf="tieneError('id_departamento')">
-                {{ obtenerMensajeError('id_departamento') }}
+              <ion-note slot="error" *ngIf="errores.id_departamento">
+                {{ errores.id_departamento }}
               </ion-note>
             </ion-item>
           </div>
 
-          <!-- Campo Rol -->
+          <!-- Campo: Rol -->
           <div class="col-md-6 col-12 mb-3">
             <ion-item 
               fill="outline" 
-              [class.ion-invalid]="tieneError('rol')"
-              [class.ion-valid]="!tieneError('rol') && formularioUsuario.get('rol')?.touched">
+              [class.ion-invalid]="errores.rol"
+              [class.ion-valid]="!errores.rol && formularioUsuario.get('rol')?.touched">
               <ion-label position="stacked">
-                Rol del Usuario <span class="text-danger">*</span>
+                Rol <span class="text-danger">*</span>
               </ion-label>
               <ion-select 
                 formControlName="rol"
                 placeholder="Selecciona un rol"
-                interface="popover"
-                (ionBlur)="onCampoFormulario()">
+                (ionChange)="onCampoFormulario()"
+                interface="popover">
                 <ion-select-option 
                   *ngFor="let opcion of opcionesRol" 
                   [value]="opcion.valor">
@@ -259,142 +341,61 @@
                 </ion-select-option>
               </ion-select>
               <ion-note slot="helper">
-                Define los permisos del usuario en el sistema
+                Nivel de permisos del usuario en el sistema
               </ion-note>
-              <ion-note slot="error" *ngIf="tieneError('rol')">
-                {{ obtenerMensajeError('rol') }}
+              <ion-note slot="error" *ngIf="errores.rol">
+                {{ errores.rol }}
               </ion-note>
             </ion-item>
           </div>
-        </div>
-
-        <!-- Descripción de roles -->
-        <div class="roles-description mt-3">
-          <h6 class="text-muted mb-2">Descripción de Roles:</h6>
-          <div class="row">
-            <div class="col-md-6 col-12 mb-2">
-              <div class="role-card p-2 border rounded">
-                <strong class="text-primary">Administrador:</strong>
-                <small class="text-muted d-block">Acceso completo al sistema, gestión de usuarios y configuración.</small>
-              </div>
-            </div>
-            <div class="col-md-6 col-12 mb-2">
-              <div class="role-card p-2 border rounded">
-                <strong class="text-success">Responsable:</strong>
-                <small class="text-muted d-block">Gestión de tickets de su departamento y métricas.</small>
-              </div>
-            </div>
-            <div class="col-md-6 col-12 mb-2">
-              <div class="role-card p-2 border rounded">
-                <strong class="text-info">Usuario Interno:</strong>
-                <small class="text-muted d-block">Empleado de la empresa, puede crear y seguir sus tickets.</small>
-              </div>
-            </div>
-            <div class="col-md-6 col-12 mb-2">
-              <div class="role-card p-2 border rounded">
-                <strong class="text-warning">Usuario Externo:</strong>
-                <small class="text-muted d-block">Cliente externo, acceso limitado a sus propios tickets.</small>
-              </div>
-            </div>
-          </div>
+          
         </div>
       </ion-card-content>
     </ion-card>
 
-    <!-- Vista previa del usuario -->
-    <ion-card class="preview-card" *ngIf="formularioUsuario.valid">
-      <ion-card-header>
-        <ion-card-title>
-          <ion-icon name="eye-outline" class="me-2"></ion-icon>
-          Vista Previa del Usuario
-        </ion-card-title>
-        <ion-card-subtitle>
-          Información que se guardará en el sistema
-        </ion-card-subtitle>
-      </ion-card-header>
-
-      <ion-card-content>
-        <div class="user-preview">
-          <div class="row">
-            <div class="col-md-6 col-12">
-              <div class="preview-item mb-2">
-                <strong>Nombre:</strong> {{ formularioUsuario.get('nombre')?.value }}
-              </div>
-              <div class="preview-item mb-2">
-                <strong>Email:</strong> {{ formularioUsuario.get('email')?.value }}
-              </div>
-              <div class="preview-item mb-2">
-                <strong>RUT:</strong> {{ formularioUsuario.get('rut')?.value }}
-              </div>
-            </div>
-            <div class="col-md-6 col-12">
-              <div class="preview-item mb-2">
-                <strong>Departamento:</strong> 
-                {{ obtenerNombreDepartamento(formularioUsuario.get('id_departamento')?.value) }}
-              </div>
-              <div class="preview-item mb-2">
-                <strong>Rol:</strong> 
-                {{ obtenerEtiquetaRol(formularioUsuario.get('rol')?.value) }}
-              </div>
-              <div class="preview-item mb-2">
-                <strong>Estado:</strong> 
-                <span [class]="formularioUsuario.get('activo')?.value ? 'text-success' : 'text-warning'">
-                  {{ formularioUsuario.get('activo')?.value ? 'Activo' : 'Inactivo' }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </ion-card-content>
-    </ion-card>
-
-    <!-- Botones de acción -->
-    <div class="action-buttons mt-4 mb-5">
-      <div class="d-flex gap-3 justify-content-center flex-wrap">
+    <!-- BOTONES DE ACCIÓN -->
+    <div class="actions-section mt-4">
+      <div class="d-flex gap-3 justify-content-end">
         
         <!-- Botón Cancelar -->
         <ion-button 
-          (click)="cancelar()" 
-          color="medium" 
-          fill="outline"
-          size="large"
-          [disabled]="guardando">
+          fill="clear" 
+          color="medium"
+          (click)="volver()"
+          [disabled]="enviandoFormulario">
           <ion-icon name="close-outline" slot="start"></ion-icon>
           Cancelar
         </ion-button>
 
-        <!-- Botón Limpiar Formulario -->
-        <ion-button 
-          type="button"
-          (click)="formularioUsuario.reset()" 
-          color="warning" 
-          fill="outline"
-          size="large"
-          [disabled]="guardando">
-          <ion-icon name="refresh-outline" slot="start"></ion-icon>
-          Limpiar
-        </ion-button>
-
         <!-- Botón Crear Usuario -->
         <ion-button 
-          type="submit" 
-          color="success" 
+          type="submit"
           fill="solid"
-          size="large"
-          [disabled]="!formularioUsuario.valid || guardando">
-          <ion-spinner *ngIf="guardando" name="circular" class="me-2"></ion-spinner>
-          <ion-icon *ngIf="!guardando" name="checkmark-outline" slot="start"></ion-icon>
-          {{ guardando ? 'Creando...' : 'Crear Usuario' }}
+          color="primary"
+          [disabled]="formularioUsuario.invalid || enviandoFormulario">
+          <ion-icon 
+            name="checkmark-outline" 
+            slot="start" 
+            *ngIf="!enviandoFormulario">
+          </ion-icon>
+          <ion-spinner 
+            name="crescent" 
+            slot="start" 
+            *ngIf="enviandoFormulario">
+          </ion-spinner>
+          {{ enviandoFormulario ? 'Creando...' : 'Crear Usuario' }}
         </ion-button>
+        
       </div>
     </div>
+
   </form>
 
-  <!-- Loading overlay -->
-  <div *ngIf="cargando" class="loading-overlay">
-    <div class="loading-content">
-      <ion-spinner name="circular" size="large"></ion-spinner>
-      <p class="mt-3">Cargando datos...</p>
+  <!-- ESTADO DE CARGA -->
+  <div class="loading-section" *ngIf="cargando">
+    <div class="d-flex flex-column align-items-center justify-content-center py-5">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+      <p class="mt-3 text-muted">Cargando formulario...</p>
     </div>
   </div>
 

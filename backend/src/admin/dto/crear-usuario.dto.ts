@@ -61,7 +61,7 @@ export class CrearUsuarioDto {
   @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
   @MaxLength(100, { message: 'La contraseña no puede exceder 100 caracteres' })
   @Matches(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_])[A-Za-z\d@$!%*?&_]/,
     { message: 'La contraseña debe contener al menos: una minúscula, una mayúscula, un número y un carácter especial' }
   )
   contrasena: string;
