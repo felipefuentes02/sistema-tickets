@@ -110,6 +110,7 @@ export interface ErroresValidacion {
   confirmarPassword?: string;
   id_departamento?: string;
   rol?: string;
+  [key: string]: string | undefined;
 }
 
 export interface CodigoDepartamento {

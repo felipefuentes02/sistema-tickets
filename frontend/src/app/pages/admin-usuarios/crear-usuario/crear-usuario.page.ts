@@ -222,42 +222,60 @@ export class CrearUsuarioPage implements OnInit, OnDestroy {
     });
   }
 
+  onCampoFormulario(): void {
+    // Obtener todos los controles del formulario
+    const controles = Object.keys(this.formularioUsuario.controls);
+    
+    // Validar cada control que ha sido tocado
+    controles.forEach(nombreControl => {
+      const control = this.formularioUsuario.get(nombreControl);
+      if (control?.touched) {
+        this.validarCampoEspecifico(nombreControl);
+      }
+    });
+  }
+
   private validarCampoEspecifico(campo: string): void {
     const control = this.formularioUsuario.get(campo);
-    if (!control || !control.errors) return;
-
-    const errores = control.errors;
     
-    switch (campo) {
-      case 'rut':
-        if (errores['required']) {
-          this.errores.rut = 'El RUT es obligatorio';
-        } else if (errores['rutInvalido']) {
-          this.errores.rut = 'Formato de RUT inválido';
-        } else if (errores['rutYaExiste']) {
-          this.errores.rut = 'Este RUT ya está registrado';
-        }
-        break;
-        
-      case 'email':
-        if (errores['required']) {
-          this.errores.correo = 'El email es obligatorio';
-        } else if (errores['email']) {
-          this.errores.correo = 'Formato de email inválido';
-        } else if (errores['emailYaExiste']) {
-          this.errores.correo = 'Este email ya está registrado';
-        }
-        break;
-        
-      case 'departamento':
-        if (errores['required']) {
-          this.errores.id_departamento = 'Debe seleccionar un departamento';
-        } else if (errores['codigoDepartamentoInvalido']) {
-          this.errores.id_departamento = 'Código de departamento inválido. Use: 1, 2, 3 o 4';
-        }
-        break;
+    if (control) {
+      if (control.errors && control.touched) {
+        // Si hay errores y el campo fue tocado, actualiza los mensajes de error
+        this.errores[campo] = this.obtenerMensajeError(campo, control.errors);
+      } else {
+        // Si no hay errores o el campo no fue tocado, elimina el mensaje de error
+        delete this.errores[campo];
+      }
     }
   }
+
+  private obtenerMensajeError(campo: string, errores: any): string {
+    if (errores.required) return 'Este campo es requerido';
+    if (errores.email) return 'Debe ser un correo electrónico válido';
+    if (errores.minlength) return `Mínimo ${errores.minlength.requiredLength} caracteres`;
+    if (errores.maxlength) return `Máximo ${errores.maxlength.requiredLength} caracteres`;
+    if (errores.pattern) return 'Formato inválido';
+    
+    // Errores específicos por campo
+    switch (campo) {
+      case 'rut':
+        if (errores.rutInvalido) return 'RUT inválido';
+        if (errores.rutDuplicado) return 'Este RUT ya está registrado';
+        break;
+      case 'correo':
+        if (errores.emailDuplicado) return 'Este correo ya está registrado';
+        break;
+      case 'contrasena':
+        if (errores.passwordDebil) return 'La contraseña no cumple con los requisitos mínimos';
+        break;
+      case 'confirmarContrasena':
+        if (errores.passwordsNoCoinciden) return 'Las contraseñas no coinciden';
+        break;
+    }
+
+    return 'Campo inválido';
+  }
+
   private async cargarDepartamentos(): Promise<void> {
     try {
       this.cargando = true;
@@ -403,7 +421,10 @@ export class CrearUsuarioPage implements OnInit, OnDestroy {
 
     await alert.present();
   }
-
+  
+  volver() {
+    this.router.navigate(['/admin-usuarios']);
+  }
   obtenerNombreCompleto(): string {
     const primerNombre = this.formularioUsuario.get('primerNombre')?.value || '';
     const segundoNombre = this.formularioUsuario.get('segundoNombre')?.value || '';

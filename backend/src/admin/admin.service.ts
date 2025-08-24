@@ -1,10 +1,3 @@
-/**
- * ==========================================
- * ARCHIVO: backend/src/admin/admin.service.ts
- * Descripción: AdminService definitivo sin errores de tipos
- * ==========================================
- */
-
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
@@ -522,7 +515,7 @@ export class AdminService {
     return mapeoDescripciones[codigo] || '';
   }
 
-  private async validarEmail(email: string, usuarioId?: number): Promise<boolean> {
+  public async validarEmail(email: string, usuarioId?: number): Promise<boolean> {
     try {
       const whereClause: any = { correo: email };
       
@@ -542,7 +535,7 @@ export class AdminService {
     }
   }
 
-  private async validarRut(rut: string, usuarioId?: number): Promise<boolean> {
+  public async validarRut(rut: string, usuarioId?: number): Promise<boolean> {
     try {
       const whereClause: any = { rut: rut };
       

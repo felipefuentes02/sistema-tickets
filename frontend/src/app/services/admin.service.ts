@@ -4,7 +4,6 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
-
 //Interface para el resumen general de la empresa
 interface ResumenEmpresa {
   totalTickets: number;

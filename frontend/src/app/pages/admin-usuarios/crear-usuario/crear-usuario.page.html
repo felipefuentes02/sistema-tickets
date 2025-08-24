@@ -24,7 +24,7 @@
   </div>
 
   <!-- Formulario principal -->
-  <form [formGroup]="formularioUsuario" (ngSubmit)="onSubmit()" *ngIf="!cargando">
+  <form [formGroup]="formularioUsuario" (ngSubmit)="crearUsuario()" *ngIf="!cargando">
     
     <!-- SECCIÓN: Información Personal -->
     <ion-card class="form-section">

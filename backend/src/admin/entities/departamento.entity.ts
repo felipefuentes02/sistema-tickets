@@ -378,7 +378,7 @@ export class AdminController {
    * GET /api/admin/tendencia-mensual
    */
   @Get('tendencia-mensual')
-  async obtenerTendenciaMensual(@Query('meses') meses: string = '6') {
+  async obtenerTendenciaMensual(@Query('meses') meses: string = '6'): Promise<any> {
     try {
       const tendencia = await this.adminService.obtenerTendenciaMensual(parseInt(meses));
       
@@ -404,9 +404,7 @@ export class AdminController {
   @Get('tickets-estado')
   async obtenerTicketsPorEstado(@Query('departamento') departamento?: string) {
     try {
-      const distribucion = await this.adminService.obtenerTicketsPorEstado(
-        departamento ? parseInt(departamento) : undefined
-      );
+      const distribucion = await this.adminService.obtenerTicketsPorEstado();
       
       return {
         success: true,

@@ -29,9 +29,12 @@ export class UsuariosService {
    * ✅ CORREGIDO: Método que retorna Promise
    */
   async obtenerUsuarios(filtros: FiltrosUsuario = {}): Promise<RespuestaUsuarios> {
+    console.log('📥 Iniciando obtenerUsuarios con filtros:', filtros);
+    
     try {
       let params = new HttpParams();
 
+      // Agregar filtros a los parámetros
       if (filtros.nombre) params = params.set('nombre', filtros.nombre);
       if (filtros.departamento) params = params.set('departamento', filtros.departamento.toString());
       if (filtros.rol) params = params.set('rol', filtros.rol);
@@ -40,29 +43,47 @@ export class UsuariosService {
       if (filtros.pagina) params = params.set('pagina', filtros.pagina.toString());
       if (filtros.limite) params = params.set('limite', filtros.limite.toString());
 
+      console.log('🔍 Realizando petición GET a:', `${this.baseUrl}/usuarios`, 'con params:', params.toString());
+
       const response = await firstValueFrom(
         this.http.get<RespuestaUsuarios>(`${this.baseUrl}/usuarios`, { params })
           .pipe(
             catchError(error => {
               console.error('❌ Error al obtener usuarios:', error);
+              console.error('Detalles del error:', {
+                status: error.status,
+                statusText: error.statusText,
+                error: error.error
+              });
               throw {
                 success: false,
                 data: [],
                 message: 'Error al cargar usuarios',
-                error: error.message
+                error: error.message || 'Error desconocido'
               };
             })
           )
       );
 
+      // Validar la respuesta
+      if (!response.success) {
+        console.warn('⚠️ La petición fue exitosa pero response.success es false:', response);
+      }
+
+      console.log('✅ Usuarios obtenidos exitosamente:', {
+        cantidad: response.data?.length || 0,
+        success: response.success
+      });
+
       return response;
 
     } catch (error: any) {
+      console.error('❌ Error en obtenerUsuarios:', error);
       return {
         success: false,
         data: [],
         message: 'Error al cargar usuarios',
-        error: error.message
+        error: error.message || 'Error desconocido'
       };
     }
   }
