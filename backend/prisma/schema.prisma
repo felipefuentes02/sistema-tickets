@@ -144,11 +144,12 @@ model usuarios {
   id_departamento  Int?
   ultimo_acceso    DateTime? @db.Timestamptz(6)
   fecha_creacion   DateTime? @default(now()) @db.Timestamptz(6)
+  rut              String    @unique @db.VarChar(12)
 
+  @@index([rut], map: "idx_usuarios_rut")
   @@map("usuarios")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model usuarios_en_copia {
   id_ticket      Int
   id_usuario     Int

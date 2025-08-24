@@ -17,22 +17,19 @@ import {
   ToastController, 
   AlertController 
 } from '@ionic/angular';
-import { Subject, takeUntil, debounceTime, distinctUntilChanged, of, Observable } from 'rxjs';
-import { map, catchError, delay } from 'rxjs/operators';
+import { Subject, takeUntil, debounceTime, distinctUntilChanged, of, Observable, from } from 'rxjs';
+import { map, catchError, switchMap } from 'rxjs/operators';
 
-// Servicio e interfaces
 import { UsuariosService } from '../../../services/usuarios.service';
 import { 
   CrearUsuario, 
   Departamento, 
   RolUsuario, 
-  ErroresValidacion 
+  ErroresValidacion,
+  CodigoDepartamento,
+  MapeoCodigosDepartamento
 } from '../../../interfaces/admin-usuarios.interface';
 
-/**
- * Componente para crear un nuevo usuario
- * Incluye validaciones en tiempo real y manejo de errores
- */
 @Component({
   selector: 'app-crear-usuario',
   templateUrl: './crear-usuario.page.html',
@@ -47,28 +44,16 @@ import {
 })
 export class CrearUsuarioPage implements OnInit, OnDestroy {
 
-  /** Subject para destruir suscripciones */
   private destroy$ = new Subject<void>();
 
-  /** Formulario de creación de usuario */
   formularioUsuario!: FormGroup;
-
-  /** Lista de departamentos disponibles */
   departamentos: Departamento[] = [];
-
-  /** Estado de carga */
   cargando = false;
-
-  /** Estado de envío del formulario */
   enviandoFormulario = false;
-
-  /** Errores de validación */
   errores: ErroresValidacion = {};
 
-  /** Enum de roles para el template */
   readonly RolUsuario = RolUsuario;
 
-  /** Opciones de roles disponibles para el select */
   readonly opcionesRol = [
     { valor: RolUsuario.ADMINISTRADOR, etiqueta: 'Administrador' },
     { valor: RolUsuario.RESPONSABLE, etiqueta: 'Responsable' },
@@ -76,7 +61,13 @@ export class CrearUsuarioPage implements OnInit, OnDestroy {
     { valor: RolUsuario.USUARIO_EXTERNO, etiqueta: 'Usuario Externo' }
   ];
 
-  /** Configuración de validación de contraseña */
+  readonly codigosDepartamento: MapeoCodigosDepartamento = {
+    1: { nombre: 'Administración', descripcion: 'Gestión administrativa y recursos humanos', clase: 'bg-primary' },
+    2: { nombre: 'Comercial', descripcion: 'Ventas, marketing y atención comercial', clase: 'bg-success' },
+    3: { nombre: 'Informática', descripcion: 'Desarrollo, infraestructura y soporte técnico', clase: 'bg-info' },
+    4: { nombre: 'Operaciones', descripcion: 'Logística, producción y operaciones', clase: 'bg-warning' }
+  };
+
   readonly configuracionPassword = {
     minimo: 8,
     requiereNumero: true,
@@ -85,15 +76,6 @@ export class CrearUsuarioPage implements OnInit, OnDestroy {
     requiereEspecial: true
   };
 
-  /**
-   * Constructor del componente
-   * @param formBuilder Constructor de formularios
-   * @param usuariosService Servicio de usuarios
-   * @param router Router de Angular
-   * @param loadingController Controlador de loading
-   * @param toastController Controlador de toast
-   * @param alertController Controlador de alertas
-   */
   constructor(
     private formBuilder: FormBuilder,
     private usuariosService: UsuariosService,
@@ -103,597 +85,362 @@ export class CrearUsuarioPage implements OnInit, OnDestroy {
     private alertController: AlertController
   ) {}
 
-  /**
-   * Inicialización del componente
-   */
   ngOnInit(): void {
-    console.log('🚀 Inicializando CrearUsuarioPage');
     this.inicializarFormulario();
-    this.configurarValidacionesDinamicas();
+    this.configurarValidacionesEnTiempoReal();
     this.cargarDepartamentos();
   }
 
-  /**
-   * Destrucción del componente
-   */
   ngOnDestroy(): void {
-    console.log('🧹 Destruyendo CrearUsuarioPage');
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  // ============ MÉTODOS DE INICIALIZACIÓN ============
-
-  /**
-   * Inicializa el formulario con validadores
-   */
-  private inicializarFormulario(): void {
-    console.log('📝 Inicializando formulario de usuario');
-    
+   private inicializarFormulario(): void {
     this.formularioUsuario = this.formBuilder.group({
-      // Campos de nombre usando nomenclatura completa
-      primer_nombre: ['', [
-        Validators.required,
-        Validators.minLength(2),
-        Validators.maxLength(25),
-        Validators.pattern(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/)
-      ]],
-      segundo_nombre: ['', [
-        Validators.maxLength(25),
-        Validators.pattern(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/)
-      ]],
-      primer_apellido: ['', [
-        Validators.required,
-        Validators.minLength(2),
-        Validators.maxLength(25),
-        Validators.pattern(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/)
-      ]],
-      segundo_apellido: ['', [
-        Validators.required,
-        Validators.minLength(2),
-        Validators.maxLength(25),
-        Validators.pattern(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/)
-      ]],
-      
-      // Email usando nomenclatura 'correo'
-      correo: ['', 
-        [
-          Validators.required,
-          Validators.email,
-          Validators.maxLength(80)
-        ],
-        [this.validadorEmailAsincrono()]
-      ],
-      
-      // Campo RUT
-      rut: ['', [
-        Validators.required,
-        this.validadorRut.bind(this)
-      ]],
-      
-      // Campos de contraseña
-      contrasena: ['', [
-        Validators.required,
-        this.validadorPassword.bind(this)
-      ]],
-      confirmarContrasena: ['', [
-        Validators.required
-      ]],
-      
-      // Campos adicionales
-      id_departamento: [null, [Validators.required]],
-      rol: ['', [Validators.required]]
-      
-    }, { 
-      validators: this.validadorContrasenaCoincidente.bind(this)
+      primerNombre: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(25)]],
+      segundoNombre: ['', [Validators.maxLength(25)]],
+      primerApellido: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(25)]],
+      segundoApellido: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(25)]],
+      rut: ['', [Validators.required, this.validadorRUT], [this.validadorRUTUnico()]],
+      email: ['', [Validators.required, Validators.email], [this.validadorEmailUnico()]],
+      departamento: ['', [Validators.required, this.validadorCodigoDepartamento]],
+      rol: ['', [Validators.required]],
+      password: ['', [Validators.required, this.validadorPassword]],
+      confirmarPassword: ['', [Validators.required]]
+    }, {
+      validators: [this.validadorPasswordsCoinciden]
     });
   }
 
-  /**
-   * Configura validaciones dinámicas y observables
-   */
-  private configurarValidacionesDinamicas(): void {
-    console.log('🔍 Configurando validaciones dinámicas');
-    
-    // Validación en tiempo real para correo
-    this.formularioUsuario.get('correo')?.valueChanges
-      .pipe(
-        debounceTime(500),
-        distinctUntilChanged(),
-        takeUntil(this.destroy$)
-      )
-      .subscribe(async (correo) => {
-        if (correo && this.formularioUsuario.get('correo')?.valid) {
-          await this.validarCorreoDisponible(correo);
-        }
-        this.actualizarErroresValidacion();
-      });
-    
-    // Validación en tiempo real para contraseñas
-    this.formularioUsuario.get('contrasena')?.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
-        this.formularioUsuario.get('confirmarContrasena')?.updateValueAndValidity();
-        this.actualizarErroresValidacion();
-      });
+  private validadorRUT = (control: AbstractControl): ValidationErrors | null => {
+    const rut = control.value;
+    if (!rut) return null;
 
-    this.formularioUsuario.get('confirmarContrasena')?.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
-        this.actualizarErroresValidacion();
-      });
-  }
-
-  // ============ MÉTODOS DE CARGA DE DATOS ============
-
-  /**
-   * Carga la lista de departamentos disponibles
-   */
-  private async cargarDepartamentos(): Promise<void> {
-    this.cargando = true;
-    console.log('🏢 Cargando departamentos...');
-    
-    try {
-      this.departamentos = await this.usuariosService.obtenerDepartamentos().toPromise() || [];
-      console.log('✅ Departamentos cargados:', this.departamentos.length);
-    } catch (error) {
-      console.error('❌ Error al cargar departamentos:', error);
-      await this.mostrarError('Error al cargar la lista de departamentos');
-    } finally {
-      this.cargando = false;
-    }
-  }
-
-  // ============ MÉTODOS DE VALIDACIÓN ============
-
-  /**
-   * Validador de RUT chileno
-   * @param control Control del formulario
-   * @returns Error de validación o null
-   */
-  private validadorRut(control: AbstractControl): ValidationErrors | null {
-    if (!control.value) {
-      return null; // El required ya maneja este caso
-    }
-
-    const rut = control.value.replace(/\./g, '').replace('-', '');
-    
-    // Verificar formato básico
-    if (!/^\d{7,8}[0-9kK]$/.test(rut)) {
-      return { 'formatoRutInvalido': true };
-    }
-
-    // Validar dígito verificador
-    const numero = rut.slice(0, -1);
-    const dv = rut.slice(-1).toLowerCase();
-    
-    let suma = 0;
-    let multiplicador = 2;
-    
-    for (let i = numero.length - 1; i >= 0; i--) {
-      suma += parseInt(numero[i]) * multiplicador;
-      multiplicador = multiplicador === 7 ? 2 : multiplicador + 1;
-    }
-    
-    const resto = suma % 11;
-    const dvCalculado = resto === 0 ? '0' : resto === 1 ? 'k' : (11 - resto).toString();
-    
-    if (dv !== dvCalculado) {
-      return { 'digitoVerificadorInvalido': true };
+    if (!this.usuariosService.validarFormatoRUT(rut)) {
+      return { rutInvalido: true };
     }
 
     return null;
-  }
+  };
 
-  /**
-   * Validador personalizado para contraseñas
-   * @param control Control del formulario
-   * @returns Errores de validación o null
-   */
-  private validadorPassword(control: AbstractControl): ValidationErrors | null {
-    const password = control.value;
-    
-    if (!password) {
-      return null; // El required ya maneja este caso
-    }
-    
-    const errores: ValidationErrors = {};
-    
-    // Validar longitud mínima
-    if (password.length < this.configuracionPassword.minimo) {
-      errores['longitudMinima'] = true;
-    }
-    
-    // Validar que contenga al menos un número
-    if (this.configuracionPassword.requiereNumero && !/\d/.test(password)) {
-      errores['requiereNumero'] = true;
-    }
-    
-    // Validar que contenga al menos una mayúscula
-    if (this.configuracionPassword.requiereMayuscula && !/[A-Z]/.test(password)) {
-      errores['requiereMayuscula'] = true;
-    }
-    
-    // Validar que contenga al menos una minúscula
-    if (this.configuracionPassword.requiereMinuscula && !/[a-z]/.test(password)) {
-      errores['requiereMinuscula'] = true;
-    }
-    
-    // Validar que contenga al menos un carácter especial
-    if (this.configuracionPassword.requiereEspecial && !/[@$!%*?&_]/.test(password)) {
-      errores['requiereEspecial'] = true;
-    }
-    
-    return Object.keys(errores).length > 0 ? errores : null;
-  }
-
-  /**
-   * Validador para confirmar que las contraseñas coincidan
-   * @param formGroup Grupo del formulario
-   * @returns Error de validación o null
-   */
-  private validadorContrasenaCoincidente(formGroup: FormGroup): ValidationErrors | null {
-    const contrasena = formGroup.get('contrasena')?.value;
-    const confirmarContrasena = formGroup.get('confirmarContrasena')?.value;
-    
-    if (contrasena && confirmarContrasena && contrasena !== confirmarContrasena) {
-      return { 'contrasenasNoCoinciden': true };
-    }
-    
-    return null;
-  }
-
-  /**
-   * Validador asíncrono para verificar disponibilidad del email
-   * @returns Función validadora asíncrona
-   */
-  private validadorEmailAsincrono(): AsyncValidatorFn {
+  private validadorRUTUnico(): AsyncValidatorFn {
     return (control: AbstractControl): Observable<ValidationErrors | null> => {
-      if (!control.value || !this.isValidEmail(control.value)) {
+      if (!control.value || this.validadorRUT(control)) {
         return of(null);
       }
-      
-      return this.usuariosService.validarEmail(control.value).pipe(
-        delay(300),
-        map(disponible => disponible ? null : { 'correoEnUso': true }),
+
+      // ✅ Convertir Promise a Observable usando from()
+      return from(this.usuariosService.verificarRutDisponible(control.value)).pipe(
+        map(disponible => disponible ? null : { rutYaExiste: true }),
         catchError(() => of(null))
       );
     };
   }
 
-  /**
-   * Valida formato básico de email
-   * @param email Email a validar
-   * @returns true si es válido
-   */
-  private isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+  private validadorCodigoDepartamento = (control: AbstractControl): ValidationErrors | null => {
+    const codigo = parseInt(control.value);
+    const codigosValidos = [1, 2, 3, 4];
+    
+    if (!codigosValidos.includes(codigo)) {
+      return { codigoDepartamentoInvalido: true };
+    }
+    
+    return null;
+  };
+
+  private validadorEmailUnico(): AsyncValidatorFn {
+    return (control: AbstractControl): Observable<ValidationErrors | null> => {
+      if (!control.value || Validators.email(control)) {
+        return of(null);
+      }
+
+      return from(this.usuariosService.verificarEmailDisponible(control.value)).pipe(
+        map(disponible => disponible ? null : { emailYaExiste: true }),
+        catchError(() => of(null))
+      );
+    };
   }
 
-  /**
-   * Valida si un correo está disponible
-   * @param correo Correo a validar
-   */
-  private async validarCorreoDisponible(correo: string): Promise<void> {
-    try {
-      const disponible = await this.usuariosService.validarEmail(correo).toPromise();
-      
-      if (!disponible) {
-        this.errores.correo = 'Este correo ya está registrado en el sistema';
-        this.formularioUsuario.get('correo')?.setErrors({ 'correoEnUso': true });
-      } else {
-        if (this.errores.correo === 'Este correo ya está registrado en el sistema') {
-          delete this.errores.correo;
-        }
-        
-        const control = this.formularioUsuario.get('correo');
-        if (control?.errors?.['correoEnUso']) {
-          delete control.errors['correoEnUso'];
-          if (Object.keys(control.errors).length === 0) {
-            control.setErrors(null);
+  private validadorPassword = (control: AbstractControl): ValidationErrors | null => {
+    const password = control.value;
+    if (!password) return null;
+
+    const errores: any = {};
+
+    if (password.length < 8) {
+      errores.longitudMinima = true;
+    }
+
+    if (!/[0-9]/.test(password)) {
+      errores.requiereNumero = true;
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      errores.requiereMayuscula = true;
+    }
+
+    if (!/[a-z]/.test(password)) {
+      errores.requiereMinuscula = true;
+    }
+
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      errores.requiereEspecial = true;
+    }
+
+    return Object.keys(errores).length > 0 ? errores : null;
+  };
+
+  private validadorPasswordsCoinciden = (group: AbstractControl): ValidationErrors | null => {
+    const password = group.get('password')?.value;
+    const confirmarPassword = group.get('confirmarPassword')?.value;
+
+    return password === confirmarPassword ? null : { passwordsNoCoinciden: true };
+  };
+
+  private configurarValidacionesEnTiempoReal(): void {
+    this.formularioUsuario.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.errores = {};
+      });
+
+    const camposCriticos = ['email', 'rut', 'departamento'];
+    
+    camposCriticos.forEach(campo => {
+      this.formularioUsuario.get(campo)?.statusChanges
+        .pipe(
+          takeUntil(this.destroy$),
+          debounceTime(300),
+          distinctUntilChanged()
+        )
+        .subscribe(status => {
+          if (status === 'INVALID') {
+            this.validarCampoEspecifico(campo);
           }
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error al validar correo:', error);
-    }
+        });
+    });
   }
 
-  /**
-   * Actualiza los errores de validación para mostrar en el template
-   */
-  private actualizarErroresValidacion(): void {
-    this.errores = {};
+  private validarCampoEspecifico(campo: string): void {
+    const control = this.formularioUsuario.get(campo);
+    if (!control || !control.errors) return;
+
+    const errores = control.errors;
     
-    // Errores de primer nombre
-    const primerNombreControl = this.formularioUsuario.get('primer_nombre');
-    if (primerNombreControl?.touched && primerNombreControl?.errors) {
-      if (primerNombreControl.errors['required']) {
-        this.errores.primer_nombre = 'El primer nombre es requerido';
-      } else if (primerNombreControl.errors['minlength']) {
-        this.errores.primer_nombre = 'El primer nombre debe tener al menos 2 caracteres';
-      } else if (primerNombreControl.errors['maxlength']) {
-        this.errores.primer_nombre = 'El primer nombre no puede exceder 25 caracteres';
-      } else if (primerNombreControl.errors['pattern']) {
-        this.errores.primer_nombre = 'El primer nombre solo puede contener letras';
-      }
-    }
-    
-    // Errores de segundo nombre
-    const segundoNombreControl = this.formularioUsuario.get('segundo_nombre');
-    if (segundoNombreControl?.touched && segundoNombreControl?.errors) {
-      if (segundoNombreControl.errors['maxlength']) {
-        this.errores.segundo_nombre = 'El segundo nombre no puede exceder 25 caracteres';
-      } else if (segundoNombreControl.errors['pattern']) {
-        this.errores.segundo_nombre = 'El segundo nombre solo puede contener letras';
-      }
-    }
-    
-    // Errores de primer apellido
-    const primerApellidoControl = this.formularioUsuario.get('primer_apellido');
-    if (primerApellidoControl?.touched && primerApellidoControl?.errors) {
-      if (primerApellidoControl.errors['required']) {
-        this.errores.primer_apellido = 'El primer apellido es requerido';
-      } else if (primerApellidoControl.errors['minlength']) {
-        this.errores.primer_apellido = 'El primer apellido debe tener al menos 2 caracteres';
-      } else if (primerApellidoControl.errors['maxlength']) {
-        this.errores.primer_apellido = 'El primer apellido no puede exceder 25 caracteres';
-      } else if (primerApellidoControl.errors['pattern']) {
-        this.errores.primer_apellido = 'El primer apellido solo puede contener letras';
-      }
-    }
-    
-    // Errores de segundo apellido
-    const segundoApellidoControl = this.formularioUsuario.get('segundo_apellido');
-    if (segundoApellidoControl?.touched && segundoApellidoControl?.errors) {
-      if (segundoApellidoControl.errors['required']) {
-        this.errores.segundo_apellido = 'El segundo apellido es requerido';
-      } else if (segundoApellidoControl.errors['minlength']) {
-        this.errores.segundo_apellido = 'El segundo apellido debe tener al menos 2 caracteres';
-      } else if (segundoApellidoControl.errors['maxlength']) {
-        this.errores.segundo_apellido = 'El segundo apellido no puede exceder 25 caracteres';
-      } else if (segundoApellidoControl.errors['pattern']) {
-        this.errores.segundo_apellido = 'El segundo apellido solo puede contener letras';
-      }
-    }
-    
-    // Errores de correo
-    const correoControl = this.formularioUsuario.get('correo');
-    if (correoControl?.touched && correoControl?.errors) {
-      if (correoControl.errors['required']) {
-        this.errores.correo = 'El correo es requerido';
-      } else if (correoControl.errors['email']) {
-        this.errores.correo = 'Formato de correo inválido';
-      } else if (correoControl.errors['maxlength']) {
-        this.errores.correo = 'El correo no puede exceder 80 caracteres';
-      } else if (correoControl.errors['correoEnUso']) {
-        this.errores.correo = 'Este correo ya está registrado en el sistema';
-      }
-    }
-    
-    // Errores de RUT
-    const rutControl = this.formularioUsuario.get('rut');
-    if (rutControl?.touched && rutControl?.errors) {
-      if (rutControl.errors['required']) {
-        this.errores.rut = 'El RUT es requerido';
-      } else if (rutControl.errors['formatoRutInvalido']) {
-        this.errores.rut = 'Formato de RUT inválido (ej: 12345678-9)';
-      } else if (rutControl.errors['digitoVerificadorInvalido']) {
-        this.errores.rut = 'Dígito verificador del RUT es incorrecto';
-      }
-    }
-    
-    // Errores de contraseña
-    const contrasenaControl = this.formularioUsuario.get('contrasena');
-    if (contrasenaControl?.touched && contrasenaControl?.errors) {
-      if (contrasenaControl.errors['required']) {
-        this.errores.contrasena = 'La contraseña es requerida';
-      } else {
-        const requisitos = [];
-        if (contrasenaControl.errors['longitudMinima']) {
-          requisitos.push(`mínimo ${this.configuracionPassword.minimo} caracteres`);
+    switch (campo) {
+      case 'rut':
+        if (errores['required']) {
+          this.errores.rut = 'El RUT es obligatorio';
+        } else if (errores['rutInvalido']) {
+          this.errores.rut = 'Formato de RUT inválido';
+        } else if (errores['rutYaExiste']) {
+          this.errores.rut = 'Este RUT ya está registrado';
         }
-        if (contrasenaControl.errors['requiereNumero']) {
-          requisitos.push('al menos un número');
-        }
-        if (contrasenaControl.errors['requiereMayuscula']) {
-          requisitos.push('al menos una mayúscula');
-        }
-        if (contrasenaControl.errors['requiereMinuscula']) {
-          requisitos.push('al menos una minúscula');
-        }
-        if (contrasenaControl.errors['requiereEspecial']) {
-          requisitos.push('al menos un carácter especial');
-        }
+        break;
         
-        if (requisitos.length > 0) {
-          this.errores.contrasena = `La contraseña debe tener: ${requisitos.join(', ')}`;
+      case 'email':
+        if (errores['required']) {
+          this.errores.correo = 'El email es obligatorio';
+        } else if (errores['email']) {
+          this.errores.correo = 'Formato de email inválido';
+        } else if (errores['emailYaExiste']) {
+          this.errores.correo = 'Este email ya está registrado';
         }
+        break;
+        
+      case 'departamento':
+        if (errores['required']) {
+          this.errores.id_departamento = 'Debe seleccionar un departamento';
+        } else if (errores['codigoDepartamentoInvalido']) {
+          this.errores.id_departamento = 'Código de departamento inválido. Use: 1, 2, 3 o 4';
+        }
+        break;
+    }
+  }
+  private async cargarDepartamentos(): Promise<void> {
+    try {
+      this.cargando = true;
+      console.log('Cargando departamentos para crear usuario...');
+      
+      const respuesta = await this.usuariosService.obtenerDepartamentos();
+      
+      if (respuesta.success) {
+        this.departamentos = Array.isArray(respuesta.data) ? respuesta.data : [respuesta.data];
+        console.log(`${this.departamentos.length} departamentos cargados`);
       }
-    }
-    
-    // Errores de confirmación de contraseña
-    const confirmarContrasenaControl = this.formularioUsuario.get('confirmarContrasena');
-    if (confirmarContrasenaControl?.touched) {
-      if (confirmarContrasenaControl.errors?.['required']) {
-        this.errores.confirmarContrasena = 'Debes confirmar la contraseña';
-      } else if (this.formularioUsuario.errors?.['contrasenasNoCoinciden']) {
-        this.errores.confirmarContrasena = 'Las contraseñas no coinciden';
-      }
-    }
-    
-    // Errores de departamento
-    const departamentoControl = this.formularioUsuario.get('id_departamento');
-    if (departamentoControl?.touched && departamentoControl?.errors?.['required']) {
-      this.errores.id_departamento = 'Debes seleccionar un departamento';
-    }
-    
-    // Errores de rol
-    const rolControl = this.formularioUsuario.get('rol');
-    if (rolControl?.touched && rolControl?.errors?.['required']) {
-      this.errores.rol = 'Debes seleccionar un rol';
+
+    } catch (error) {
+      console.error('Error al cargar departamentos:', error);
+      await this.mostrarError('Error', 'No se pudieron cargar los departamentos');
+    } finally {
+      this.cargando = false;
     }
   }
 
-  // ============ MÉTODOS DE EVENTOS ============
-
-  /**
-   * Maneja el evento de cambio en los campos del formulario
-   */
-  onCampoFormulario(): void {
-    this.actualizarErroresValidacion();
-  }
-
-  /**
-   * Maneja el envío del formulario
-   */
-  async onSubmit(): Promise<void> {
-    console.log('📤 Iniciando envío de formulario...');
-    
-    // Marcar todos los campos como tocados para mostrar errores
-    this.formularioUsuario.markAllAsTouched();
-    this.actualizarErroresValidacion();
-    
-    // Verificar si el formulario es válido
-    if (!this.formularioUsuario.valid) {
-      console.log('❌ Formulario inválido:', this.formularioUsuario.errors);
-      await this.mostrarError('Por favor corrige los errores en el formulario');
+  async crearUsuario(): Promise<void> {
+    if (this.formularioUsuario.invalid || this.enviandoFormulario) {
+      this.marcarCamposComoTocados();
       return;
     }
-    
-    // Mostrar confirmación antes de crear el usuario
-    const alert = await this.alertController.create({
-      header: 'Confirmar Creación',
-      message: '¿Estás seguro de que quieres crear este usuario?',
-      buttons: [
-        {
-          text: 'Cancelar',
-          role: 'cancel'
-        },
-        {
-          text: 'Crear Usuario',
-          handler: () => this.crearUsuario()
-        }
-      ]
-    });
-    
-    await alert.present();
-  }
 
-  /**
-   * Crea el usuario en el sistema
-   */
-  private async crearUsuario(): Promise<void> {
-    this.enviandoFormulario = true;
-    
-    // Mostrar loading
     const loading = await this.loadingController.create({
       message: 'Creando usuario...',
       spinner: 'crescent'
     });
-    await loading.present();
-    
+
     try {
-      // Preparar datos del usuario
+      await loading.present();
+      this.enviandoFormulario = true;
+
       const datosUsuario: CrearUsuario = {
-        nombre: `${this.formularioUsuario.value.primer_nombre} ${this.formularioUsuario.value.segundo_nombre || ''} ${this.formularioUsuario.value.primer_apellido} ${this.formularioUsuario.value.segundo_apellido}`.trim(),
-        email: this.formularioUsuario.value.correo,
-        rut: '', // Si se necesita RUT, agregar campo al formulario
-        password: this.formularioUsuario.value.contrasena,
-        confirmarPassword: this.formularioUsuario.value.confirmarContrasena,
-        id_departamento: this.formularioUsuario.value.id_departamento,
-        rol: this.formularioUsuario.value.rol
+        nombre: this.obtenerNombreCompleto(),
+        email: this.formularioUsuario.get('email')?.value,
+        rut: this.formularioUsuario.get('rut')?.value,
+        password: this.formularioUsuario.get('password')?.value,
+        confirmarPassword: this.formularioUsuario.get('confirmarPassword')?.value,
+        id_departamento: parseInt(this.formularioUsuario.get('departamento')?.value),
+        rol: this.formularioUsuario.get('rol')?.value
       };
-      
-      console.log('📤 Enviando datos del usuario:', { ...datosUsuario, password: '***', confirmarPassword: '***' });
-      
-      // Crear usuario
-      const respuesta = await this.usuariosService.crearUsuario(datosUsuario).toPromise();
-      
-      console.log('✅ Usuario creado exitosamente:', respuesta);
-      
-      // Mostrar mensaje de éxito
-      await this.mostrarExito('Usuario creado exitosamente');
-      
-      // Navegar de vuelta a la lista
-      await this.router.navigate(['/admin-usuarios']);
-      
-    } catch (error: any) {
-      console.error('❌ Error al crear usuario:', error);
-      
-      let mensajeError = 'Error al crear el usuario';
-      
-      if (error.error?.message) {
-        mensajeError = error.error.message;
-      } else if (error.message) {
-        mensajeError = error.message;
+
+      // Validar departamento
+      if (!this.validarCodigoDepartamentoFinal(datosUsuario.id_departamento)) {
+        throw new Error('Código de departamento inválido. Debe ser 1, 2, 3 o 4');
       }
+
+      console.log('Creando usuario:', datosUsuario);
+
+      const respuesta = await this.usuariosService.crearUsuario(datosUsuario);
+
+      if (respuesta.success) {
+        await this.mostrarExito('Usuario creado correctamente');
+        this.router.navigate(['/admin-usuarios']);
+      } else {
+        await this.mostrarError('Error al crear usuario', respuesta.message);
+      }
+
+    } catch (error: any) {
+      console.error('Error al crear usuario:', error);
       
-      await this.mostrarError(mensajeError);
-      
+      if (error.message.includes('departamento')) {
+        this.errores.id_departamento = error.message;
+      } else if (error.message.includes('RUT')) {
+        this.errores.rut = error.message;
+      } else if (error.message.includes('email')) {
+        this.errores.correo = error.message;
+      } else {
+        await this.mostrarError('Error', error.message || 'No se pudo crear el usuario');
+      }
+
     } finally {
       await loading.dismiss();
       this.enviandoFormulario = false;
     }
   }
 
-  /**
-   * Navega de vuelta a la lista de usuarios
-   */
-  async volver(): Promise<void> {
-    // Verificar si hay cambios sin guardar
+  private validarCodigoDepartamentoFinal(codigo: number): boolean {
+    const codigosValidos = [1, 2, 3, 4];
+    return codigosValidos.includes(codigo);
+  }
+
+  private marcarCamposComoTocados(): void {
+    Object.keys(this.formularioUsuario.controls).forEach(campo => {
+      this.formularioUsuario.get(campo)?.markAsTouched();
+    });
+
+    this.validarCampoEspecifico('rut');
+    this.validarCampoEspecifico('email');
+    this.validarCampoEspecifico('departamento');
+  }
+
+  async cancelar(): Promise<void> {
     if (this.formularioUsuario.dirty) {
       const alert = await this.alertController.create({
-        header: 'Cambios sin guardar',
-        message: '¿Estás seguro de que quieres salir? Se perderán los cambios realizados.',
+        header: 'Confirmar Cancelación',
+        message: '¿Estás seguro de que deseas cancelar? Se perderán los datos ingresados.',
         buttons: [
           {
-            text: 'Cancelar',
+            text: 'Continuar Editando',
             role: 'cancel'
           },
           {
-            text: 'Salir',
-            handler: () => this.router.navigate(['/admin-usuarios'])
+            text: 'Cancelar',
+            role: 'destructive',
+            handler: () => {
+              this.router.navigate(['/admin-usuarios']);
+            }
           }
         ]
       });
-      
+
       await alert.present();
     } else {
-      await this.router.navigate(['/admin-usuarios']);
+      this.router.navigate(['/admin-usuarios']);
     }
   }
 
-  // ============ MÉTODOS DE UTILIDAD ============
-
-  /**
-   * Muestra un mensaje de error
-   * @param mensaje Mensaje a mostrar
-   */
-  private async mostrarError(mensaje: string): Promise<void> {
-    const toast = await this.toastController.create({
-      message: mensaje,
-      duration: 4000,
-      color: 'danger',
-      position: 'top',
-      icon: 'alert-circle-outline'
+  async mostrarAyuda(): Promise<void> {
+    const alert = await this.alertController.create({
+      header: 'Ayuda - Crear Usuario',
+      message: `
+        <p><strong>Información Personal:</strong></p>
+        <ul>
+          <li>Primer y segundo nombre (segundo opcional)</li>
+          <li>Ambos apellidos son obligatorios</li>
+          <li>RUT en formato 12345678-9</li>
+        </ul>
+        
+        <p><strong>Departamentos:</strong></p>
+        <ul>
+          <li>1 → Administración</li>
+          <li>2 → Comercial</li>
+          <li>3 → Informática</li>
+          <li>4 → Operaciones</li>
+        </ul>
+      `,
+      buttons: ['Entendido']
     });
-    await toast.present();
+
+    await alert.present();
   }
 
-  /**
-   * Muestra un mensaje de éxito
-   * @param mensaje Mensaje a mostrar
-   */
+  obtenerNombreCompleto(): string {
+    const primerNombre = this.formularioUsuario.get('primerNombre')?.value || '';
+    const segundoNombre = this.formularioUsuario.get('segundoNombre')?.value || '';
+    const primerApellido = this.formularioUsuario.get('primerApellido')?.value || '';
+    const segundoApellido = this.formularioUsuario.get('segundoApellido')?.value || '';
+
+    return `${primerNombre} ${segundoNombre} ${primerApellido} ${segundoApellido}`.replace(/\s+/g, ' ').trim();
+  }
+
+  obtenerNombreDepartamento(): string {
+    const codigoDepartamento: number = parseInt(this.formularioUsuario.get('departamento')?.value);
+    return this.codigosDepartamento[codigoDepartamento]?.nombre || 'No seleccionado';
+  }
+
+  obtenerNombreRol(): string {
+    const rolSeleccionado = this.formularioUsuario.get('rol')?.value;
+    const opcion = this.opcionesRol.find(r => r.valor === rolSeleccionado);
+    return opcion?.etiqueta || 'No seleccionado';
+  }
+
   private async mostrarExito(mensaje: string): Promise<void> {
     const toast = await this.toastController.create({
       message: mensaje,
       duration: 3000,
       color: 'success',
-      position: 'top',
+      position: 'bottom',
       icon: 'checkmark-circle-outline'
     });
     await toast.present();
+  }
+
+  private async mostrarError(titulo: string, mensaje: string): Promise<void> {
+    const alert = await this.alertController.create({
+      header: titulo,
+      message: mensaje,
+      buttons: ['OK']
+    });
+    await alert.present();
   }
 }

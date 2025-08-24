@@ -1,57 +1,81 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Body,
-  Param,
-  Query,
+import { 
+  Controller, 
+  Get, 
+  Post, 
+  Put, 
+  Delete, 
+  Body, 
+  Param, 
+  Query, 
   ParseIntPipe,
-  HttpStatus,
-  HttpCode
+  HttpException,
+  HttpStatus
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
-import { CrearUsuarioDto } from './dto/crear-usuario.dto';
-import { ActualizarUsuarioDto } from './dto/actualizar-usuario.dto';
 
-@Controller('admin')
+/**
+ * DTOs para validación de entrada
+ */
+interface CrearUsuarioDto {
+  primer_nombre: string;
+  segundo_nombre?: string;
+  primer_apellido: string;
+  segundo_apellido: string;
+  correo: string;
+  rut: string;
+  contrasena: string;
+  confirmar_contrasena?: string;
+  id_departamento: number;
+  rol: string;
+}
+
+interface ActualizarUsuarioDto {
+  primer_nombre?: string;
+  segundo_nombre?: string;
+  primer_apellido?: string;
+  segundo_apellido?: string;
+  correo?: string;
+  rut?: string;
+  contrasena?: string;
+  id_departamento?: number;
+  rol?: string;
+}
+
+/**
+ * Controlador administrativo para gestión de usuarios y departamentos
+ */
+@Controller('api/admin')
 export class AdminController {
+  
   constructor(private readonly adminService: AdminService) {}
 
-  @Get('usuarios')
-  async obtenerUsuarios(
-    @Query('nombre') nombre?: string,
-    @Query('departamento') departamento?: string,
-    @Query('rol') rol?: string,
-    @Query('activo') activo?: string,
-    @Query('pagina') pagina: string = '1',
-    @Query('limite') limite: string = '10'
-  ) {
-    try {
-      const filtros = {
-        nombre,
-        departamento: departamento ? parseInt(departamento) : undefined,
-        rol,
-        activo: activo !== undefined ? activo === 'true' : undefined,
-        pagina: parseInt(pagina),
-        limite: parseInt(limite)
-      };
+  // ============ ENDPOINTS DE USUARIOS ============
 
+  /**
+   * Obtiene lista de usuarios
+   * GET /api/admin/usuarios
+   */
+  @Get('usuarios')
+  async obtenerUsuarios(@Query() filtros: any) {
+    try {
+      console.log('📥 GET /api/admin/usuarios - Filtros:', filtros);
+      
       const usuarios = await this.adminService.obtenerUsuarios(filtros);
       
       return {
         success: true,
         data: usuarios,
-        message: 'Usuarios obtenidos correctamente'
+        message: `${usuarios.length} usuarios obtenidos correctamente`
       };
+
     } catch (error) {
-      return {
+      console.error('❌ Error en GET /usuarios:', error);
+      throw new HttpException({
         success: false,
-        data: null,
+        data: [],
         message: 'Error al obtener usuarios',
         error: error.message
-      };
+      }, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -62,28 +86,28 @@ export class AdminController {
   @Get('usuarios/:id')
   async obtenerUsuarioPorId(@Param('id', ParseIntPipe) id: number) {
     try {
+      console.log(`📥 GET /api/admin/usuarios/${id}`);
+      
       const usuario = await this.adminService.obtenerUsuarioPorId(id);
       
-      if (!usuario) {
-        return {
-          success: false,
-          data: null,
-          message: 'Usuario no encontrado'
-        };
-      }
-
       return {
         success: true,
         data: usuario,
         message: 'Usuario obtenido correctamente'
       };
+
     } catch (error) {
-      return {
+      console.error(`❌ Error en GET /usuarios/${id}:`, error);
+      
+      const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      const message = error.message || 'Error al obtener usuario';
+      
+      throw new HttpException({
         success: false,
         data: null,
-        message: 'Error al obtener usuario',
+        message,
         error: error.message
-      };
+      }, status);
     }
   }
 
@@ -92,9 +116,24 @@ export class AdminController {
    * POST /api/admin/usuarios
    */
   @Post('usuarios')
-  @HttpCode(HttpStatus.CREATED)
   async crearUsuario(@Body() crearUsuarioDto: CrearUsuarioDto) {
     try {
+      console.log('📥 POST /api/admin/usuarios - Datos:', {
+        ...crearUsuarioDto,
+        contrasena: '[OCULTA]',
+        confirmar_contrasena: '[OCULTA]'
+      });
+
+      // Validar que las contraseñas coincidan
+      if (crearUsuarioDto.contrasena !== crearUsuarioDto.confirmar_contrasena) {
+        throw new HttpException({
+          success: false,
+          data: null,
+          message: 'Las contraseñas no coinciden',
+          error: 'PASSWORDS_MISMATCH'
+        }, HttpStatus.BAD_REQUEST);
+      }
+
       const usuario = await this.adminService.crearUsuario(crearUsuarioDto);
       
       return {
@@ -102,13 +141,28 @@ export class AdminController {
         data: usuario,
         message: 'Usuario creado correctamente'
       };
+
     } catch (error) {
-      return {
+      console.error('❌ Error en POST /usuarios:', error);
+      
+      const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      let message = 'Error al crear usuario';
+      
+      // Manejar errores específicos
+      if (error.message.includes('email')) {
+        message = 'El email ya está registrado';
+      } else if (error.message.includes('RUT')) {
+        message = 'El RUT ya está registrado';
+      } else if (error.message.includes('departamento')) {
+        message = error.message;
+      }
+      
+      throw new HttpException({
         success: false,
         data: null,
-        message: 'Error al crear usuario',
+        message,
         error: error.message
-      };
+      }, status);
     }
   }
 
@@ -122,6 +176,11 @@ export class AdminController {
     @Body() actualizarUsuarioDto: ActualizarUsuarioDto
   ) {
     try {
+      console.log(`📥 PUT /api/admin/usuarios/${id} - Datos:`, {
+        ...actualizarUsuarioDto,
+        contrasena: actualizarUsuarioDto.contrasena ? '[OCULTA]' : undefined
+      });
+
       const usuario = await this.adminService.actualizarUsuario(id, actualizarUsuarioDto);
       
       return {
@@ -129,13 +188,19 @@ export class AdminController {
         data: usuario,
         message: 'Usuario actualizado correctamente'
       };
+
     } catch (error) {
-      return {
+      console.error(`❌ Error en PUT /usuarios/${id}:`, error);
+      
+      const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      const message = error.message || 'Error al actualizar usuario';
+      
+      throw new HttpException({
         success: false,
         data: null,
-        message: 'Error al actualizar usuario',
+        message,
         error: error.message
-      };
+      }, status);
     }
   }
 
@@ -146,268 +211,188 @@ export class AdminController {
   @Delete('usuarios/:id')
   async eliminarUsuario(@Param('id', ParseIntPipe) id: number) {
     try {
+      console.log(`📥 DELETE /api/admin/usuarios/${id}`);
+
       await this.adminService.eliminarUsuario(id);
       
       return {
         success: true,
-        data: null,
+        data: true,
         message: 'Usuario eliminado correctamente'
       };
+
     } catch (error) {
-      return {
+      console.error(`❌ Error en DELETE /usuarios/${id}:`, error);
+      
+      const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      const message = error.message || 'Error al eliminar usuario';
+      
+      throw new HttpException({
         success: false,
-        data: null,
-        message: 'Error al eliminar usuario',
+        data: false,
+        message,
         error: error.message
-      };
+      }, status);
     }
   }
 
   // ============ ENDPOINTS DE DEPARTAMENTOS ============
 
   /**
-   * Obtiene la lista de departamentos
+   * Obtiene lista de departamentos
    * GET /api/admin/departamentos
    */
   @Get('departamentos')
-  async obtenerDepartamentos(@Query('activo') activo?: string) {
+  async obtenerDepartamentos() {
     try {
-      const filtros = {
-        activo: activo !== undefined ? activo === 'true' : undefined
-      };
-
-      const departamentos = await this.adminService.obtenerDepartamentos(filtros);
+      console.log('📥 GET /api/admin/departamentos');
+      
+      const departamentos = await this.adminService.obtenerDepartamentos();
       
       return {
         success: true,
         data: departamentos,
-        message: 'Departamentos obtenidos correctamente'
+        message: `${departamentos.length} departamentos obtenidos correctamente`
       };
+
     } catch (error) {
-      return {
+      console.error('❌ Error en GET /departamentos:', error);
+      throw new HttpException({
         success: false,
-        data: null,
+        data: [],
         message: 'Error al obtener departamentos',
         error: error.message
-      };
-    }
-  }
-
-  /**
-   * Obtiene un departamento específico por ID
-   * GET /api/admin/departamentos/:id
-   */
-  @Get('departamentos/:id')
-  async obtenerDepartamentoPorId(@Param('id', ParseIntPipe) id: number) {
-    try {
-      const departamento = await this.adminService.obtenerDepartamentoPorId(id);
-      
-      if (!departamento) {
-        return {
-          success: false,
-          data: null,
-          message: 'Departamento no encontrado'
-        };
-      }
-
-      return {
-        success: true,
-        data: departamento,
-        message: 'Departamento obtenido correctamente'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        data: null,
-        message: 'Error al obtener departamento',
-        error: error.message
-      };
+      }, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   // ============ ENDPOINTS DE VALIDACIÓN ============
 
   /**
-   * Valida si un email está disponible
-   * GET /api/admin/usuarios/validar-email
+   * ✅ NUEVO: Valida si un RUT está disponible
+   * GET /api/admin/validar-rut?rut=12345678-9
    */
-  @Get('usuarios/validar-email')
-  async validarEmail(
-    @Query('email') email: string,
-    @Query('usuarioId') usuarioId?: string
-  ) {
-    try {
-      const disponible = await this.adminService.validarEmail(
-        email,
-        usuarioId ? parseInt(usuarioId) : undefined
-      );
-      
-      return {
-        success: true,
-        disponible,
-        message: disponible ? 'Email disponible' : 'Email ya está en uso'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        disponible: false,
-        message: 'Error al validar email',
-        error: error.message
-      };
-    }
-  }
-
-  /**
-   * Valida si un RUT está disponible
-   * GET /api/admin/usuarios/validar-rut
-   */
-  @Get('usuarios/validar-rut')
-  async validarRut(
+  @Get('validar-rut')
+  async validarRutDisponible(
     @Query('rut') rut: string,
     @Query('usuarioId') usuarioId?: string
   ) {
     try {
-      const disponible = await this.adminService.validarRut(
-        rut,
+      console.log(`📥 GET /api/admin/validar-rut?rut=${rut}&usuarioId=${usuarioId}`);
+
+      if (!rut) {
+        throw new HttpException({
+          success: false,
+          data: false,
+          message: 'RUT es requerido',
+          error: 'MISSING_RUT'
+        }, HttpStatus.BAD_REQUEST);
+      }
+
+      const disponible = await this.adminService.validarRutDisponible(
+        rut, 
         usuarioId ? parseInt(usuarioId) : undefined
       );
       
       return {
         success: true,
-        disponible,
+        data: disponible,
         message: disponible ? 'RUT disponible' : 'RUT ya está en uso'
       };
+
     } catch (error) {
-      return {
+      console.error('❌ Error en GET /validar-rut:', error);
+      
+      const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      
+      throw new HttpException({
         success: false,
-        disponible: false,
+        data: false,
         message: 'Error al validar RUT',
         error: error.message
-      };
+      }, status);
     }
   }
 
-  // ============ ENDPOINTS DE MÉTRICAS ============
-
   /**
-   * Obtiene el resumen general de la empresa
-   * GET /api/admin/resumen-empresa
+   * ✅ NUEVO: Valida si un email está disponible
+   * GET /api/admin/validar-email?email=usuario@empresa.com
    */
-  @Get('resumen-empresa')
-  async obtenerResumenEmpresa() {
+  @Get('validar-email')
+  async validarEmailDisponible(
+    @Query('email') email: string,
+    @Query('usuarioId') usuarioId?: string
+  ) {
     try {
-      const resumen = await this.adminService.obtenerResumenEmpresa();
+      console.log(`📥 GET /api/admin/validar-email?email=${email}&usuarioId=${usuarioId}`);
+
+      if (!email) {
+        throw new HttpException({
+          success: false,
+          data: false,
+          message: 'Email es requerido',
+          error: 'MISSING_EMAIL'
+        }, HttpStatus.BAD_REQUEST);
+      }
+
+      const disponible = await this.adminService.validarEmailDisponible(
+        email, 
+        usuarioId ? parseInt(usuarioId) : undefined
+      );
       
       return {
         success: true,
-        data: resumen,
-        message: 'Resumen obtenido correctamente'
+        data: disponible,
+        message: disponible ? 'Email disponible' : 'Email ya está en uso'
       };
+
     } catch (error) {
-      return {
+      console.error('❌ Error en GET /validar-email:', error);
+      
+      const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      
+      throw new HttpException({
         success: false,
-        data: null,
-        message: 'Error al obtener resumen',
+        data: false,
+        message: 'Error al validar email',
         error: error.message
-      };
+      }, status);
     }
   }
 
+  // ============ ENDPOINTS DE MÉTRICAS Y DASHBOARD ============
+
   /**
-   * Obtiene métricas de departamentos
-   * GET /api/admin/metricas-departamentos
+   * Obtiene métricas generales para el dashboard
+   * GET /api/admin/metricas
    */
-  @Get('metricas-departamentos')
-  async obtenerMetricasDepartamentos() {
+  @Get('metricas')
+  async obtenerMetricas() {
     try {
-      const metricas = await this.adminService.obtenerMetricasDepartamentos();
+      console.log('📥 GET /api/admin/metricas');
+      
+      // TODO: Implementar métricas reales
+      const metricas = {
+        usuariosTotales: 0,
+        usuariosActivos: 0,
+        departamentos: 4,
+        ticketsAbiertos: 0
+      };
       
       return {
         success: true,
         data: metricas,
         message: 'Métricas obtenidas correctamente'
       };
+
     } catch (error) {
-      return {
+      console.error('❌ Error en GET /metricas:', error);
+      throw new HttpException({
         success: false,
         data: null,
         message: 'Error al obtener métricas',
         error: error.message
-      };
-    }
-  }
-
-  /**
-   * Obtiene métricas de un departamento específico
-   * GET /api/admin/metricas-departamentos/:id
-   */
-  @Get('metricas-departamentos/:id')
-  async obtenerMetricasDepartamento(@Param('id', ParseIntPipe) id: number) {
-    try {
-      const metricas = await this.adminService.obtenerMetricasDepartamento(id);
-      
-      return {
-        success: true,
-        data: metricas,
-        message: 'Métricas del departamento obtenidas correctamente'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        data: null,
-        message: 'Error al obtener métricas del departamento',
-        error: error.message
-      };
-    }
-  }
-
-  /**
-   * Obtiene tendencia mensual de tickets
-   * GET /api/admin/tendencia-mensual
-   */
-  @Get('tendencia-mensual')
-  async obtenerTendenciaMensual(@Query('meses') meses: string = '6') {
-    try {
-      const tendencia = await this.adminService.obtenerTendenciaMensual(parseInt(meses));
-      
-      return {
-        success: true,
-        data: tendencia,
-        message: 'Tendencia mensual obtenida correctamente'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        data: null,
-        message: 'Error al obtener tendencia mensual',
-        error: error.message
-      };
-    }
-  }
-
-  /**
-   * Obtiene distribución de tickets por estado
-   * GET /api/admin/tickets-estado
-   */
-  @Get('tickets-estado')
-  async obtenerTicketsPorEstado(@Query('departamento') departamento?: string) {
-    try {
-      const distribucion = await this.adminService.obtenerTicketsPorEstado(
-        departamento ? parseInt(departamento) : undefined
-      );
-      
-      return {
-        success: true,
-        data: distribucion,
-        message: 'Distribución por estado obtenida correctamente'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        data: null,
-        message: 'Error al obtener distribución por estado',
-        error: error.message
-      };
+      }, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

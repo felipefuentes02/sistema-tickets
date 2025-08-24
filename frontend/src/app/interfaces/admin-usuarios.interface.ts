@@ -1,9 +1,8 @@
-
 export interface Usuario {
   id: number;
   nombre: string;
   email: string;
-  rut: string;
+  rut: string; // ✅ Campo agregado
   id_departamento: number;
   nombre_departamento?: string;
   rol: RolUsuario;
@@ -47,7 +46,7 @@ export interface Departamento {
 
 export interface RespuestaUsuarios {
   success: boolean;
-  data: Usuario[] | Usuario;
+  data: Usuario[];
   message: string;
   error?: string;
   paginacion?: {
@@ -57,6 +56,35 @@ export interface RespuestaUsuarios {
     totalPaginas: number;
   };
 }
+
+export interface RespuestaUsuario {
+  success: boolean;
+  data: Usuario;
+  message: string;
+  error?: string;
+}
+
+export interface RespuestaDepartamentos {
+  success: boolean;
+  data: Departamento[];
+  message: string;
+  error?: string;
+}
+
+export interface RespuestaDepartamento {
+  success: boolean;
+  data: Departamento;
+  message: string;
+  error?: string;
+}
+
+export interface RespuestaBoolean {
+  success: boolean;
+  data: boolean;
+  message: string;
+  error?: string;
+}
+
 export interface FiltrosUsuario {
   nombre?: string;
   departamento?: number;
@@ -68,7 +96,6 @@ export interface FiltrosUsuario {
 }
 
 export interface ErroresValidacion {
-  // ✅ Campos usando nomenclatura del modelo de BD (los que faltan)
   primer_nombre?: string;
   segundo_nombre?: string;
   primer_apellido?: string;
@@ -76,8 +103,6 @@ export interface ErroresValidacion {
   correo?: string;
   contrasena?: string;
   confirmarContrasena?: string;
-  
-  // ✅ Mantener campos existentes para compatibilidad
   nombre?: string;
   email?: string;
   rut?: string;
@@ -86,3 +111,13 @@ export interface ErroresValidacion {
   id_departamento?: string;
   rol?: string;
 }
+
+export interface CodigoDepartamento {
+  nombre: string;
+  descripcion: string;
+  clase: string;
+}
+
+export type MapeoCodigosDepartamento = {
+  [key: number]: CodigoDepartamento;
+};
