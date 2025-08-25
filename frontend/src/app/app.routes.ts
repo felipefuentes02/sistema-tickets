@@ -1,10 +1,3 @@
-/**
- * Archivo: frontend/src/app/app.routes.ts
- * Descripción: Configuración de rutas de la aplicación corregida
- * Autor: Sistema de Gestión de Tickets
- * Fecha: 2025
- */
-
 import { Routes } from '@angular/router';
 import { AuthGuard } from './guards/auth.guard';
 import { RoleGuard } from './guards/role.guard';
@@ -20,9 +13,7 @@ export const routes: Routes = [
     path: 'login',
     loadComponent: () => import('./pages/login/login.page').then(m => m.LoginPage)
   },
-  
-  // ============ RUTAS DEL CLIENTE ============
-  {
+    {
     path: 'home',
     loadComponent: () => import('./pages/cliente-home/cliente-home.page').then(m => m.ClienteHomePage)
     // Quitar guards temporalmente: canActivate: [AuthGuard, RoleGuard]
@@ -42,9 +33,7 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/solicitudes-copia/solicitudes-copia.page').then(m => m.SolicitudesCopiePage),
     canActivate: [AuthGuard, RoleGuard]
   },
-  
-  // ============ RUTAS DEL RESPONSABLE ============
-  {
+    {
     path: 'responsable-home',
     loadComponent: () => import('./pages/responsable-home/responsable-home.page').then(m => m.ResponsableHomePage)
     // Quitar guards temporalmente: canActivate: [AuthGuard, RoleGuard]
@@ -65,8 +54,6 @@ export const routes: Routes = [
     path: 'metricas',
     loadComponent: () => import('./pages/metricas/metricas.page').then(m => m.MetricasPage)
   },
-  
-  // ============ RUTAS DEL ADMINISTRADOR ============
   {
     path: 'admin-home',
     loadComponent: () => import('./pages/admin-home/admin-home.page').then(m => m.AdminHomePage),
@@ -102,48 +89,9 @@ export const routes: Routes = [
     titulo: 'Crear Usuario',
     descripcion: 'Formulario para crear nuevo usuario'
   }
- }
-/*,
-  {
-    path: 'admin-usuarios/editar/:id',
-    loadComponent: () => import('./pages/admin-usuarios/editar-usuario/editar-usuario.page').then(m => m.EditarUsuarioPage),
-    canActivate: [AuthGuard, AdminGuard],
-    data: { 
-      titulo: 'Editar Usuario',
-      descripcion: 'Formulario para editar usuario existente'
-    }
-  },
+ },
   {
     path: 'admin-reportes',
-    loadComponent: () => import('./pages/admin-reportes/admin-reportes.page').then(m => m.AdminReportesPage),
-    canActivate: [AuthGuard, AdminGuard],
-    data: { 
-      titulo: 'Reportes',
-      descripcion: 'Generación y visualización de reportes'
-    }
-  },
-  {
-    path: 'admin-configuracion',
-    loadComponent: () => import('./pages/admin-configuracion/admin-configuracion.page').then(m => m.AdminConfiguracionPage),
-    canActivate: [AuthGuard, AdminGuard],
-    data: { 
-      titulo: 'Configuración',
-      descripcion: 'Configuración del sistema'
-    }
-  },
-  {
-    path: 'admin-departamento/:id',
-    loadComponent: () => import('./pages/admin-departamento/admin-departamento.page').then(m => m.AdminDepartamentoPage),
-    canActivate: [AuthGuard, AdminGuard],
-    data: { 
-      titulo: 'Detalle Departamento',
-      descripcion: 'Métricas detalladas del departamento'
-    }
-  },
-  
-  // ============ RUTA WILDCARD (DEBE IR AL FINAL) ============
-  {
-    path: '**',
-    redirectTo: '/login'
-  }*/
+    loadComponent: () => import('./pages/admin-reportes/admin-reportes.page').then( m => m.AdminReportesPage)
+  }
 ];

@@ -1,0 +1,557 @@
+<!--
+  Página de Reportes del Administrador
+  
+  Esta página proporciona herramientas de reportes con:
+  - 3 tipos diferentes de reportes visuales (sin gráficos)
+  - Sistema completo de filtros avanzados
+  - Tablas informativas con métricas clave
+  - Visualización clara de datos sin funcionalidad de exportación
+  
+  @author Sistema de Tickets
+  @version 1.0.0
+-->
+
+<ion-header [translucent]="true">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button 
+        defaultHref="/admin-dashboard"
+        (click)="volverAlDashboard()">
+      </ion-back-button>
+    </ion-buttons>
+    
+    <ion-title>
+      <ion-icon name="analytics-outline" class="me-2"></ion-icon>
+      Reportes Administrativos
+    </ion-title>
+
+    <ion-buttons slot="end">
+      <!-- Botón de actualizar -->
+      <ion-button 
+        fill="clear" 
+        (click)="actualizarReporte()"
+        [disabled]="cargando">
+        <ion-icon 
+          name="refresh-outline" 
+          [class.spin-animation]="cargando">
+        </ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="container-fluid py-4">
+    
+    <!-- Header con información del reporte -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <h1 class="h3 text-primary mb-2">
+              {{ obtenerTituloReporte() }}
+            </h1>
+            <p class="text-muted mb-0">
+              {{ obtenerDescripcionReporte() }}
+            </p>
+          </div>
+          <div class="text-end">
+            <small class="text-muted">
+              Última actualización: {{ currentDate | date:'dd/MM/yyyy HH:mm' }}
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Selector de tipo de reporte -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title mb-3">
+              <ion-icon name="pie-chart-outline" class="me-2"></ion-icon>
+              Tipo de Reporte
+            </h5>
+            
+            <div class="btn-group w-100" role="group">
+              <button 
+                type="button" 
+                class="btn"
+                [class.btn-primary]="tipoReporteSeleccionado === 'rendimiento'"
+                [class.btn-outline-primary]="tipoReporteSeleccionado !== 'rendimiento'"
+                (click)="cambiarTipoReporte('rendimiento')"
+                [disabled]="cargando">
+                <ion-icon name="trending-up-outline" class="me-2"></ion-icon>
+                Rendimiento por Departamento
+              </button>
+              
+              <button 
+                type="button" 
+                class="btn"
+                [class.btn-primary]="tipoReporteSeleccionado === 'temporal'"
+                [class.btn-outline-primary]="tipoReporteSeleccionado !== 'temporal'"
+                (click)="cambiarTipoReporte('temporal')"
+                [disabled]="cargando">
+                <ion-icon name="time-outline" class="me-2"></ion-icon>
+                Evolución Temporal
+              </button>
+              
+              <button 
+                type="button" 
+                class="btn"
+                [class.btn-primary]="tipoReporteSeleccionado === 'usuarios'"
+                [class.btn-outline-primary]="tipoReporteSeleccionado !== 'usuarios'"
+                (click)="cambiarTipoReporte('usuarios')"
+                [disabled]="cargando">
+                <ion-icon name="people-outline" class="me-2"></ion-icon>
+                Productividad de Usuarios
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección de filtros -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-header bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">
+                <ion-icon name="filter-outline" class="me-2"></ion-icon>
+                Filtros de Reporte
+              </h5>
+              <button 
+                class="btn btn-sm btn-outline-secondary"
+                (click)="toggleFiltros()">
+                <ion-icon 
+                  [name]="seccionFiltrosExpandida ? 'chevron-up-outline' : 'chevron-down-outline'">
+                </ion-icon>
+                {{ seccionFiltrosExpandida ? 'Ocultar' : 'Mostrar' }}
+              </button>
+            </div>
+          </div>
+          
+          <div class="card-body" [hidden]="!seccionFiltrosExpandida">
+            <!-- Filtros básicos -->
+            <div class="row g-3 mb-3">
+              <!-- Rango de fechas -->
+              <div class="col-md-3">
+                <label class="form-label fw-bold">Fecha Inicio</label>
+                <input 
+                  type="date" 
+                  class="form-control"
+                  [(ngModel)]="filtros.fechaInicio">
+              </div>
+              
+              <div class="col-md-3">
+                <label class="form-label fw-bold">Fecha Fin</label>
+                <input 
+                  type="date" 
+                  class="form-control"
+                  [(ngModel)]="filtros.fechaFin">
+              </div>
+              
+              <!-- Departamento -->
+              <div class="col-md-3">
+                <label class="form-label fw-bold">Departamento</label>
+                <select 
+                  class="form-select"
+                  [(ngModel)]="filtros.departamento">
+                  <option 
+                    *ngFor="let opcion of opcionesDepartamentos" 
+                    [value]="opcion.valor">
+                    {{ opcion.etiqueta }}
+                  </option>
+                </select>
+              </div>
+              
+              <!-- Estado -->
+              <div class="col-md-3">
+                <label class="form-label fw-bold">Estado</label>
+                <select 
+                  class="form-select"
+                  [(ngModel)]="filtros.estado">
+                  <option 
+                    *ngFor="let opcion of opcionesEstados" 
+                    [value]="opcion.valor">
+                    {{ opcion.etiqueta }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Filtros avanzados (colapsables) -->
+            <div class="border-top pt-3">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0 text-secondary">Filtros Avanzados</h6>
+                <button 
+                  class="btn btn-sm btn-link p-0"
+                  (click)="toggleFiltrosAvanzados()">
+                  <ion-icon 
+                    [name]="seccionFiltrosAvanzadosExpandida ? 'chevron-up-outline' : 'chevron-down-outline'">
+                  </ion-icon>
+                </button>
+              </div>
+              
+              <div class="row g-3" [hidden]="!seccionFiltrosAvanzadosExpandida">
+                <!-- Rol -->
+                <div class="col-md-3">
+                  <label class="form-label">Rol</label>
+                  <select 
+                    class="form-select"
+                    [(ngModel)]="filtros.rol">
+                    <option 
+                      *ngFor="let opcion of opcionesRoles" 
+                      [value]="opcion.valor">
+                      {{ opcion.etiqueta }}
+                    </option>
+                  </select>
+                </div>
+                
+                <!-- Prioridad -->
+                <div class="col-md-3">
+                  <label class="form-label">Prioridad</label>
+                  <select 
+                    class="form-select"
+                    [(ngModel)]="filtros.prioridad">
+                    <option 
+                      *ngFor="let opcion of opcionesPrioridades" 
+                      [value]="opcion.valor">
+                      {{ opcion.etiqueta }}
+                    </option>
+                  </select>
+                </div>
+                
+                <!-- Responsable -->
+                <div class="col-md-3">
+                  <label class="form-label">Responsable</label>
+                  <select 
+                    class="form-select"
+                    [(ngModel)]="filtros.responsable">
+                    <option 
+                      *ngFor="let opcion of opcionesResponsables" 
+                      [value]="opcion.valor">
+                      {{ opcion.etiqueta }}
+                    </option>
+                  </select>
+                </div>
+                
+                <!-- Cliente -->
+                <div class="col-md-3">
+                  <label class="form-label">Cliente</label>
+                  <select 
+                    class="form-select"
+                    [(ngModel)]="filtros.cliente">
+                    <option 
+                      *ngFor="let opcion of opcionesClientes" 
+                      [value]="opcion.valor">
+                      {{ opcion.etiqueta }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botones de acción -->
+            <div class="row mt-4">
+              <div class="col-12">
+                <div class="d-flex gap-2 justify-content-end">
+                  <button 
+                    type="button" 
+                    class="btn btn-outline-secondary"
+                    (click)="limpiarFiltros()"
+                    [disabled]="cargando">
+                    <ion-icon name="refresh-outline" class="me-1"></ion-icon>
+                    Limpiar Filtros
+                  </button>
+                  
+                  <button 
+                    type="button" 
+                    class="btn btn-primary"
+                    (click)="aplicarFiltros()"
+                    [disabled]="cargando">
+                    <ion-spinner 
+                      name="crescent" 
+                      *ngIf="cargando" 
+                      class="me-2">
+                    </ion-spinner>
+                    <ion-icon 
+                      name="funnel-outline" 
+                      class="me-1"
+                      *ngIf="!cargando">
+                    </ion-icon>
+                    Aplicar Filtros
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Métricas resumen -->
+    <div class="row mb-4" *ngIf="!cargando && hayDatos()">
+      <div class="col-12">
+        <div class="row g-3">
+          <!-- Total de tickets -->
+          <div class="col-md-2">
+            <div class="card bg-primary text-white shadow-sm h-100">
+              <div class="card-body text-center">
+                <ion-icon name="ticket-outline" class="fs-2 mb-2"></ion-icon>
+                <h4 class="mb-0">{{ formatearNumero(metricsResumen.totalTicketsPeriodo) }}</h4>
+                <small>Total Tickets</small>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Porcentaje resueltos -->
+          <div class="col-md-2">
+            <div class="card bg-success text-white shadow-sm h-100">
+              <div class="card-body text-center">
+                <ion-icon name="checkmark-circle-outline" class="fs-2 mb-2"></ion-icon>
+                <h4 class="mb-0">{{ metricsResumen.ticketsResueltosPromedio }}%</h4>
+                <small>Resueltos</small>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Tiempo promedio -->
+          <div class="col-md-2">
+            <div class="card bg-info text-white shadow-sm h-100">
+              <div class="card-body text-center">
+                <ion-icon name="time-outline" class="fs-2 mb-2"></ion-icon>
+                <h4 class="mb-0">{{ metricsResumen.tiempoPromedioGlobal }}h</h4>
+                <small>Tiempo Prom.</small>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Satisfacción -->
+          <div class="col-md-2" *ngIf="metricsResumen.satisfaccionPromedio > 0">
+            <div class="card bg-warning text-white shadow-sm h-100">
+              <div class="card-body text-center">
+                <ion-icon name="star-outline" class="fs-2 mb-2"></ion-icon>
+                <h4 class="mb-0">{{ metricsResumen.satisfaccionPromedio }}/5</h4>
+                <small>Satisfacción</small>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Cumplimiento SLA -->
+          <div class="col-md-2" *ngIf="metricsResumen.cumplimientoSLAPromedio > 0">
+            <div class="card bg-secondary text-white shadow-sm h-100">
+              <div class="card-body text-center">
+                <ion-icon name="shield-checkmark-outline" class="fs-2 mb-2"></ion-icon>
+                <h4 class="mb-0">{{ metricsResumen.cumplimientoSLAPromedio }}%</h4>
+                <small>SLA</small>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Mejor performer -->
+          <div class="col-md-2">
+            <div class="card bg-dark text-white shadow-sm h-100">
+              <div class="card-body text-center">
+                <ion-icon name="trophy-outline" class="fs-2 mb-2"></ion-icon>
+                <h6 class="mb-0 small">
+                  {{ metricsResumen.departamentoMasEficiente || metricsResumen.usuarioMasProductivo }}
+                </h6>
+                <small>Mejor</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Área principal de datos -->
+    <div class="row mb-4">
+      <div class="col-12">
+        <div class="card shadow">
+          <div class="card-header bg-white">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">{{ obtenerTituloReporte() }}</h5>
+              <div class="d-flex gap-2">
+                <button 
+                  class="btn btn-sm btn-outline-primary"
+                  (click)="actualizarReporte()"
+                  [disabled]="cargando">
+                  <ion-icon 
+                    name="refresh-outline" 
+                    [class.spin-animation]="cargando">
+                  </ion-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card-body">
+            <!-- Estado de carga -->
+            <div *ngIf="cargando" class="text-center py-5">
+              <ion-spinner name="crescent" class="mb-3"></ion-spinner>
+              <p class="text-muted">Generando reporte...</p>
+            </div>
+
+            <!-- Sin datos -->
+            <div *ngIf="!cargando && !hayDatos()" class="text-center py-5">
+              <ion-icon name="analytics-outline" class="display-1 text-muted mb-3"></ion-icon>
+              <h5 class="text-muted">No hay datos disponibles</h5>
+              <p class="text-muted">
+                Prueba ajustando los filtros o el rango de fechas para obtener resultados.
+              </p>
+              <button 
+                class="btn btn-primary"
+                (click)="limpiarFiltros()">
+                Limpiar Filtros
+              </button>
+            </div>
+
+            <!-- Tabla para reporte de rendimiento -->
+            <div *ngIf="!cargando && hayDatos() && tipoReporteSeleccionado === 'rendimiento'" class="table-responsive">
+              <table class="table table-hover">
+                <thead class="table-primary">
+                  <tr>
+                    <th>Departamento</th>
+                    <th class="text-center">Total Tickets</th>
+                    <th class="text-center">Resueltos</th>
+                    <th class="text-center">Pendientes</th>
+                    <th class="text-center">Tiempo Prom. (hrs)</th>
+                    <th class="text-center">Cumplimiento SLA</th>
+                    <th class="text-center">Satisfacción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of datosReporteRendimiento; trackBy: trackByDepartamento">
+                    <td>
+                      <strong>{{ item.departamento }}</strong>
+                    </td>
+                    <td class="text-center">{{ formatearNumero(item.totalTickets) }}</td>
+                    <td class="text-center">
+                      <span class="badge bg-success">{{ formatearNumero(item.ticketsResueltos) }}</span>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge bg-warning">{{ formatearNumero(item.ticketsPendientes) }}</span>
+                    </td>
+                    <td class="text-center">{{ item.tiempoPromedioResolucion }}</td>
+                    <td class="text-center">
+                      <span 
+                        class="badge"
+                        [class]="'bg-' + obtenerColorSLA(item.cumplimientoSLA)">
+                        {{ item.cumplimientoSLA }}%
+                      </span>
+                    </td>
+                    <td class="text-center">
+                      <div class="d-flex align-items-center justify-content-center">
+                        <ion-icon name="star" class="text-warning me-1"></ion-icon>
+                        {{ item.satisfaccionCliente }}
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Tabla para reporte temporal -->
+            <div *ngIf="!cargando && hayDatos() && tipoReporteSeleccionado === 'temporal'" class="table-responsive">
+              <table class="table table-hover table-sm">
+                <thead class="table-primary">
+                  <tr>
+                    <th>Fecha</th>
+                    <th class="text-center">Creados</th>
+                    <th class="text-center">Resueltos</th>
+                    <th class="text-center">Pendientes</th>
+                    <th class="text-center">Tiempo Prom. Resp. (hrs)</th>
+                    <th class="text-center">Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of datosReporteTemporal.slice(-15); trackBy: trackByFecha">
+                    <td>
+                      <strong>{{ formatearFecha(item.fecha) }}</strong>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge bg-info">{{ item.ticketsCreados }}</span>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge bg-success">{{ item.ticketsResueltos }}</span>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge bg-warning">{{ item.ticketsPendientes }}</span>
+                    </td>
+                    <td class="text-center">{{ item.tiempoPromedioRespuesta }}</td>
+                    <td class="text-center">
+                      <span 
+                        class="badge"
+                        [class]="item.ticketsResueltos >= item.ticketsCreados ? 'bg-success' : 'bg-danger'">
+                        {{ item.ticketsResueltos - item.ticketsCreados >= 0 ? '+' : '' }}{{ item.ticketsResueltos - item.ticketsCreados }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              
+              <div class="text-center mt-3" *ngIf="datosReporteTemporal.length > 15">
+                <small class="text-muted">
+                  Mostrando los últimos 15 días. Total de {{ datosReporteTemporal.length }} registros.
+                </small>
+              </div>
+            </div>
+
+            <!-- Tabla para reporte de usuarios -->
+            <div *ngIf="!cargando && hayDatos() && tipoReporteSeleccionado === 'usuarios'" class="table-responsive">
+              <table class="table table-hover">
+                <thead class="table-primary">
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Departamento</th>
+                    <th class="text-center">Asignados</th>
+                    <th class="text-center">Resueltos</th>
+                    <th class="text-center">Pendientes</th>
+                    <th class="text-center">Tiempo Prom. (hrs)</th>
+                    <th class="text-center">Eficiencia</th>
+                    <th class="text-center">Última Actividad</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of datosReporteUsuarios; trackBy: trackByUsuario">
+                    <td>
+                      <strong>{{ item.usuario }}</strong>
+                    </td>
+                    <td>
+                      <span class="badge bg-secondary">{{ item.departamento }}</span>
+                    </td>
+                    <td class="text-center">{{ formatearNumero(item.ticketsAsignados) }}</td>
+                    <td class="text-center">
+                      <span class="badge bg-success">{{ formatearNumero(item.ticketsResueltos) }}</span>
+                    </td>
+                    <td class="text-center">
+                      <span class="badge bg-warning">{{ formatearNumero(item.ticketsPendientes) }}</span>
+                    </td>
+                    <td class="text-center">{{ item.tiempoPromedioResolucion }}</td>
+                    <td class="text-center">
+                      <span 
+                        class="badge"
+                        [class]="'bg-' + obtenerColorSLA(calcularEficiencia(item.ticketsResueltos, item.ticketsAsignados))">
+                        {{ calcularEficiencia(item.ticketsResueltos, item.ticketsAsignados) }}%
+                      </span>
+                    </td>
+                    <td class="text-center">
+                      <small class="text-muted">
+                        {{ formatearFechaHora(item.ultimaActividad) }}
+                      </small>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</ion-content>

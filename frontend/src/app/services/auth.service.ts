@@ -231,4 +231,100 @@ export class AuthService {
     console.log('Ruta home:', this.getHomeRoute());
     console.log('=====================');
   }
+
+  tieneRol(rolRequerido: string): boolean {
+  const usuario = this.getCurrentUser();
+  
+  if (!usuario) {
+    console.warn('AuthService: No hay usuario autenticado para verificar rol');
+    return false;
+  }
+
+  // Verificar por nombre de rol
+  if (usuario.nombre_rol) {
+    const rolUsuario = usuario.nombre_rol.toLowerCase();
+    const rolBuscado = rolRequerido.toLowerCase();
+    
+    if (rolUsuario === rolBuscado) {
+      return true;
+    }
+  }
+
+  // Verificar por ID de rol (mapeo de IDs comunes)
+  const mapaRoles: { [key: string]: number } = {
+    'administrador': 1,
+    'tecnico': 2,
+    'responsable': 2, // Alias para técnico
+    'usuario_interno': 3,
+    'usuario_externo': 4
+  };
+
+  const idRolRequerido = mapaRoles[rolRequerido.toLowerCase()];
+  if (idRolRequerido && usuario.id_rol === idRolRequerido) {
+    return true;
+  }
+
+  console.log(`AuthService: Usuario no tiene el rol ${rolRequerido}. Rol actual:`, usuario.nombre_rol || usuario.id_rol);
+  return false;
+}
+
+/**
+ * Verifica si el usuario tiene alguno de los roles especificados
+ * @param roles - Array de nombres de roles a verificar
+ * @returns true si el usuario tiene al menos uno de los roles
+ */
+tieneAlgunoDeEstosRoles(roles: string[]): boolean {
+  return roles.some(rol => this.tieneRol(rol));
+}
+
+/**
+ * Obtiene el rol actual del usuario
+ * @returns Nombre del rol o null si no hay usuario
+ */
+obtenerRolActual(): string | null {
+  const usuario = this.getCurrentUser();
+  
+  if (!usuario) {
+    return null;
+  }
+
+  // Retornar nombre del rol si existe
+  if (usuario.nombre_rol) {
+    return usuario.nombre_rol;
+  }
+
+  // Mapear ID a nombre si solo tenemos ID
+  const mapaIds: { [key: number]: string } = {
+    1: 'administrador',
+    2: 'tecnico',
+    3: 'usuario_interno',
+    4: 'usuario_externo'
+  };
+
+  return mapaIds[usuario.id_rol] || 'desconocido';
+}
+
+/**
+ * Verifica si el usuario es administrador
+ * @returns true si es administrador, false en caso contrario
+ */
+esAdministrador(): boolean {
+  return this.tieneRol('administrador');
+}
+
+/**
+ * Verifica si el usuario es técnico o responsable
+ * @returns true si es técnico/responsable, false en caso contrario
+ */
+esTecnico(): boolean {
+  return this.tieneRol('tecnico') || this.tieneRol('responsable');
+}
+
+/**
+ * Verifica si el usuario es interno (empleado de la empresa)
+ * @returns true si es usuario interno o de mayor nivel, false en caso contrario
+ */
+esUsuarioInterno(): boolean {
+  return this.tieneAlgunoDeEstosRoles(['administrador', 'tecnico', 'usuario_interno']);
+}
 }
