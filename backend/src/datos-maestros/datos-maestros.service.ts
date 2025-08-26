@@ -2,74 +2,74 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 /**
- * Interface para departamento
+ * Interface para departamento - COMPATIBLE CON BD ACTUAL
  */
 export interface DepartamentoDto {
   id_departamento: number;
   nombre_departamento: string;
+  // Campos que NO están en la BD actual pero necesarios para el frontend
   descripcion?: string;
-  activo: boolean;
+  activo?: boolean;
   responsable_principal?: string;
   usuarios_activos?: number;
 }
 
 /**
- * Interface para prioridad
+ * Interface para prioridad - COMPATIBLE CON BD ACTUAL
  */
 export interface PrioridadDto {
   id_prioridad: number;
   nombre_prioridad: string;
   nivel: number;
+  // Campos que NO están en la BD actual pero necesarios para el frontend
   color_hex?: string;
   tiempo_respuesta_horas: number;
 }
 
 /**
- * Interface para estado
+ * Interface para estado - COMPATIBLE CON BD ACTUAL
  */
 export interface EstadoDto {
   id_estado: number;
   nombre_estado: string;
+  // Campos que NO están en la BD actual pero necesarios para el frontend
   descripcion?: string;
   es_estado_final: boolean;
   color_hex?: string;
 }
 
 /**
- * Servicio para gestión de datos maestros (departamentos, prioridades, estados)
- * Complementa el TicketsService con datos de referencia necesarios
+ * Servicio para gestión de datos maestros - COMPATIBLE CON BD ACTUAL
+ * Se adapta a la estructura real de la base de datos
  */
 @Injectable()
 export class DatosMaestrosService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Obtener todos los departamentos activos
+   * Obtener todos los departamentos (simulando campos faltantes)
    * @returns Promise<DepartamentoDto[]> - Lista de departamentos
    */
   async obtenerDepartamentos(): Promise<DepartamentoDto[]> {
     try {
-      console.log('📁 Obteniendo lista de departamentos activos');
+      console.log('📁 Obteniendo lista de departamentos (BD actual)');
 
       const departamentos = await this.prisma.departamentos.findMany({
-        where: {
-          activo: true
-        },
         orderBy: {
           nombre_departamento: 'asc'
         }
       });
 
-      console.log(`✅ ${departamentos.length} departamentos obtenidos`);
+      console.log(`✅ ${departamentos.length} departamentos obtenidos de BD actual`);
 
       return departamentos.map(dept => ({
         id_departamento: dept.id_departamento,
         nombre_departamento: dept.nombre_departamento,
-        descripcion: dept.descripcion,
-        activo: dept.activo,
-        // TODO: Agregar campos relacionados cuando estén disponibles
-        // responsable_principal: dept.responsable_principal?.nombre,
-        // usuarios_activos: dept._count?.usuarios
+        // Simular campos que no están en la BD actual
+        descripcion: this.obtenerDescripcionDepartamento(dept.nombre_departamento),
+        activo: true, // Asumir que todos están activos por ahora
+        responsable_principal: undefined,
+        usuarios_activos: undefined
       }));
 
     } catch (error) {
@@ -100,8 +100,8 @@ export class DatosMaestrosService {
       return {
         id_departamento: departamento.id_departamento,
         nombre_departamento: departamento.nombre_departamento,
-        descripcion: departamento.descripcion,
-        activo: departamento.activo
+        descripcion: this.obtenerDescripcionDepartamento(departamento.nombre_departamento),
+        activo: true
       };
 
     } catch (error) {
@@ -111,26 +111,27 @@ export class DatosMaestrosService {
   }
 
   /**
-   * Obtener todas las prioridades
+   * Obtener todas las prioridades (simulando campos faltantes)
    * @returns Promise<PrioridadDto[]> - Lista de prioridades
    */
   async obtenerPrioridades(): Promise<PrioridadDto[]> {
     try {
-      console.log('⚡ Obteniendo lista de prioridades');
+      console.log('⚡ Obteniendo lista de prioridades (BD actual)');
 
       const prioridades = await this.prisma.prioridades.findMany({
         orderBy: {
-          nivel: 'asc' // Ordenar por nivel (1=Alta, 2=Media, 3=Baja)
+          nivel: 'asc'
         }
       });
 
-      console.log(`✅ ${prioridades.length} prioridades obtenidas`);
+      console.log(`✅ ${prioridades.length} prioridades obtenidas de BD actual`);
 
       return prioridades.map(prioridad => ({
         id_prioridad: prioridad.id_prioridad,
         nombre_prioridad: prioridad.nombre_prioridad,
         nivel: prioridad.nivel,
-        color_hex: prioridad.color_hex,
+        // Simular campos que no están en la BD actual
+        color_hex: this.obtenerColorPrioridad(prioridad.nivel),
         tiempo_respuesta_horas: this.calcularTiempoRespuestaEsperado(prioridad.nivel)
       }));
 
@@ -163,7 +164,7 @@ export class DatosMaestrosService {
         id_prioridad: prioridad.id_prioridad,
         nombre_prioridad: prioridad.nombre_prioridad,
         nivel: prioridad.nivel,
-        color_hex: prioridad.color_hex,
+        color_hex: this.obtenerColorPrioridad(prioridad.nivel),
         tiempo_respuesta_horas: this.calcularTiempoRespuestaEsperado(prioridad.nivel)
       };
 
@@ -174,27 +175,28 @@ export class DatosMaestrosService {
   }
 
   /**
-   * Obtener todos los estados de ticket
+   * Obtener todos los estados de ticket (simulando campos faltantes)
    * @returns Promise<EstadoDto[]> - Lista de estados
    */
   async obtenerEstados(): Promise<EstadoDto[]> {
     try {
-      console.log('🔄 Obteniendo lista de estados');
+      console.log('🔄 Obteniendo lista de estados (BD actual)');
 
-      const estados = await this.prisma.estados.findMany({
+      const estados = await this.prisma.estados_ticket.findMany({
         orderBy: {
           id_estado: 'asc'
         }
       });
 
-      console.log(`✅ ${estados.length} estados obtenidos`);
+      console.log(`✅ ${estados.length} estados obtenidos de BD actual`);
 
       return estados.map(estado => ({
         id_estado: estado.id_estado,
         nombre_estado: estado.nombre_estado,
-        descripcion: estado.descripcion,
+        // Simular campos que no están en la BD actual
+        descripcion: this.obtenerDescripcionEstado(estado.nombre_estado),
         es_estado_final: this.esEstadoFinal(estado.id_estado),
-        color_hex: estado.color_hex
+        color_hex: this.obtenerColorEstado(estado.nombre_estado)
       }));
 
     } catch (error) {
@@ -212,7 +214,7 @@ export class DatosMaestrosService {
     try {
       console.log(`🔍 Buscando estado ID: ${id}`);
 
-      const estado = await this.prisma.estados.findUnique({
+      const estado = await this.prisma.estados_ticket.findUnique({
         where: { id_estado: id }
       });
 
@@ -225,9 +227,9 @@ export class DatosMaestrosService {
       return {
         id_estado: estado.id_estado,
         nombre_estado: estado.nombre_estado,
-        descripcion: estado.descripcion,
+        descripcion: this.obtenerDescripcionEstado(estado.nombre_estado),
         es_estado_final: this.esEstadoFinal(estado.id_estado),
-        color_hex: estado.color_hex
+        color_hex: this.obtenerColorEstado(estado.nombre_estado)
       };
 
     } catch (error) {
@@ -237,17 +239,14 @@ export class DatosMaestrosService {
   }
 
   /**
-   * Validar que un departamento puede recibir tickets
+   * Validar que un departamento existe
    * @param idDepartamento - ID del departamento
-   * @returns Promise<boolean> - True si puede recibir tickets
+   * @returns Promise<boolean> - True si existe
    */
   async validarDepartamentoActivo(idDepartamento: number): Promise<boolean> {
     try {
       const departamento = await this.prisma.departamentos.findUnique({
-        where: { 
-          id_departamento: idDepartamento,
-          activo: true
-        }
+        where: { id_departamento: idDepartamento }
       });
 
       const esValido = !!departamento;
@@ -298,19 +297,17 @@ export class DatosMaestrosService {
 
       const [
         totalDepartamentos,
-        departamentosActivos,
         totalPrioridades,
         totalEstados
       ] = await Promise.all([
         this.prisma.departamentos.count(),
-        this.prisma.departamentos.count({ where: { activo: true } }),
         this.prisma.prioridades.count(),
-        this.prisma.estados.count()
+        this.prisma.estados_ticket.count()
       ]);
 
       const estadisticas = {
         total_departamentos: totalDepartamentos,
-        departamentos_activos: departamentosActivos,
+        departamentos_activos: totalDepartamentos, // Asumir que todos están activos
         total_prioridades: totalPrioridades,
         total_estados: totalEstados
       };
@@ -328,31 +325,80 @@ export class DatosMaestrosService {
   // ============ MÉTODOS AUXILIARES PRIVADOS ============
 
   /**
+   * Obtener descripción simulada para departamento
+   */
+  private obtenerDescripcionDepartamento(nombre: string): string {
+    const descripciones: { [key: string]: string } = {
+      'Administración': 'Departamento de administración y recursos humanos',
+      'Comercial': 'Departamento comercial y ventas',
+      'Informática': 'Departamento de tecnología y sistemas',
+      'Operaciones': 'Departamento de operaciones y logística'
+    };
+    return descripciones[nombre] || `Departamento de ${nombre.toLowerCase()}`;
+  }
+
+  /**
+   * Obtener color simulado para prioridad
+   */
+  private obtenerColorPrioridad(nivel: number): string {
+    switch (nivel) {
+      case 1: return '#dc3545'; // Rojo para Alta
+      case 2: return '#ffc107'; // Amarillo para Media
+      case 3: return '#28a745'; // Verde para Baja
+      default: return '#6c757d'; // Gris por defecto
+    }
+  }
+
+  /**
+   * Obtener descripción simulada para estado
+   */
+  private obtenerDescripcionEstado(nombre: string): string {
+    const descripciones: { [key: string]: string } = {
+      'Nuevo': 'Ticket recién creado',
+      'En Progreso': 'Ticket siendo trabajado',
+      'Escalado': 'Ticket escalado a supervisor',
+      'Resuelto': 'Ticket resuelto, pendiente de cierre',
+      'Cerrado': 'Ticket cerrado completamente'
+    };
+    return descripciones[nombre] || `Estado: ${nombre}`;
+  }
+
+  /**
+   * Obtener color simulado para estado
+   */
+  private obtenerColorEstado(nombre: string): string {
+    const colores: { [key: string]: string } = {
+      'Nuevo': '#007bff',
+      'En Progreso': '#ffc107',
+      'Escalado': '#fd7e14',
+      'Resuelto': '#28a745',
+      'Cerrado': '#6c757d'
+    };
+    return colores[nombre] || '#343a40';
+  }
+
+  /**
    * Calcular tiempo de respuesta esperado basado en nivel de prioridad
    * @param nivel - Nivel de prioridad (1=Alta, 2=Media, 3=Baja)
    * @returns number - Horas de tiempo de respuesta esperado
    */
   private calcularTiempoRespuestaEsperado(nivel: number): number {
     switch (nivel) {
-      case 1: // Prioridad Alta
-        return 4; // 4 horas
-      case 2: // Prioridad Media
-        return 24; // 1 día (24 horas)
-      case 3: // Prioridad Baja
-        return 72; // 3 días (72 horas)
-      default:
-        return 24; // Por defecto 1 día
+      case 1: return 4;   // Prioridad Alta: 4 horas
+      case 2: return 24;  // Prioridad Media: 1 día
+      case 3: return 72;  // Prioridad Baja: 3 días
+      default: return 24; // Por defecto 1 día
     }
   }
 
   /**
-   * Determinar si un estado es final (no permite más cambios)
+   * Determinar si un estado es final
    * @param idEstado - ID del estado
    * @returns boolean - True si es estado final
    */
   private esEstadoFinal(idEstado: number): boolean {
-    // Estados finales: 4=Resuelto, 5=Cerrado, 6=Cancelado
-    const estadosFinales = [4, 5, 6];
+    // Estados finales típicos: 4=Resuelto, 5=Cerrado
+    const estadosFinales = [4, 5, 6, 7, 8]; // Adaptar según tu BD
     return estadosFinales.includes(idEstado);
   }
 }

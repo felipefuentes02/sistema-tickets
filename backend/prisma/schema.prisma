@@ -7,80 +7,182 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model archivos_adjuntos {
-  id_adjunto        Int       @id @default(autoincrement())
-  id_ticket         Int
-  id_comentario     Int
-  nombre_almacenado String    @db.VarChar(120)
-  ruta_archivo      String    @db.VarChar(200)
-  tamano_archivo    Int
-  tipo_mime         String    @db.VarChar(80)
-  subido_por        Int
-  fecha_creacion    DateTime? @default(now()) @db.Timestamptz(6)
-}
-
-model comentarios_ticket {
-  id_comentario       Int       @id @default(autoincrement())
-  id_ticket           Int
-  id_usuario          Int
-  comnentario         String
-  es_interno          Boolean?  @default(false)
-  es_solucion         Boolean?  @default(false)
-  fecha_creacion      DateTime? @default(now()) @db.Timestamptz(6)
-  fecha_actualizacion DateTime? @default(now()) @db.Timestamptz(6)
-}
-
-model configuraciones_sistema {
-  id_configuracion    Int       @id @default(autoincrement())
-  clave_configuracion String    @unique @db.VarChar
-  valor_configuracion String
-  tipo_dato           String?   @db.VarChar(20)
-  actualizado_por     Int
-  fecha_creacion      DateTime? @default(now()) @db.Timestamptz(6)
-  fecha_actualizacion DateTime? @db.Timestamptz(6)
-}
+// ============ MODELOS COMPATIBLES CON BD ACTUAL ============
 
 model departamentos {
-  id_departamento     Int    @id @default(autoincrement())
-  nombre_departamento String @unique @db.VarChar(25)
-}
-
-model derivaciones_ticket {
-  id_derivacion           Int       @id @default(autoincrement())
-  id_ticket               Int
-  id_departamento_origen  Int
-  id_departamento_destino Int
-  motivo                  String
-  derivado_por            Int
-  fecha_creacion          DateTime? @default(now()) @db.Timestamptz(6)
-}
-
-model encuestas {
-  id_encuesta  Int       @id @default(autoincrement())
-  id_ticket    Int
-  calificacion Int
-  comentario   String?
-  enviado_por  Int
-  fecha_envio  DateTime? @default(now()) @db.Timestamptz(6)
+  id_departamento     Int      @id @default(autoincrement())
+  nombre_departamento String   @unique @db.VarChar(50)
+  // Solo campos que existen en la BD actual
+  
+  // Relaciones
+  usuarios            usuarios[]
+  tickets             tickets[]
+  derivaciones_origen derivaciones_tickets[] @relation("DepartamentoOrigen")
+  derivaciones_destino derivaciones_tickets[] @relation("DepartamentoDestino")
+  
+  @@map("departamentos")
 }
 
 model estados_ticket {
-  id_estado       Int      @id @default(autoincrement())
-  nombre_estado   String   @unique @db.VarChar(25)
-  es_estado_final Boolean? @default(false)
-  orden_secuencia Int?
+  id_estado      Int     @id @default(autoincrement())
+  nombre_estado  String  @unique @db.VarChar(25)
+  // Solo campos que existen en la BD actual
+  
+  // Relaciones
+  tickets        tickets[]
+  historial      historial_tickets[]
+  
+  @@map("estados_ticket")
+}
+
+model prioridades {
+  id_prioridad     Int    @id @default(autoincrement())
+  nombre_prioridad String @unique @db.VarChar(25)
+  nivel            Int    @unique
+  // Solo campos que existen en la BD actual
+  
+  // Relaciones
+  tickets          tickets[]
+  sla_prioridades  sla_prioridades?
+  
+  @@map("prioridades")
+}
+
+model roles {
+  id_rol     Int    @id @default(autoincrement())
+  nombre_rol String @unique @db.VarChar(25)
+  permisos   Json?
+  
+  // Relaciones
+  usuarios   usuarios[]
+  
+  @@map("roles")
+}
+
+model usuarios {
+  id_usuario       Int       @id @default(autoincrement())
+  primer_nombre    String    @db.VarChar(25)
+  segundo_nombre   String?   @db.VarChar(25)
+  primer_apellido  String    @db.VarChar(25)
+  segundo_apellido String    @db.VarChar(25)
+  correo           String    @unique @db.VarChar(80)
+  hash_contrasena  String    @unique @db.VarChar(100)
+  rut              String    @unique @db.VarChar(12)
+  id_rol           Int
+  id_departamento  Int?
+  ultimo_acceso    DateTime? @db.Timestamptz(6)
+  fecha_creacion   DateTime? @default(now()) @db.Timestamptz(6)
+  
+  // Relaciones
+  rol              roles         @relation(fields: [id_rol], references: [id_rol])
+  departamento     departamentos? @relation(fields: [id_departamento], references: [id_departamento])
+  
+  // Tickets como solicitante
+  tickets_solicitados tickets[] @relation("TicketSolicitante")
+  
+  // Tickets asignados como responsable
+  tickets_asignados tickets[] @relation("TicketResponsable")
+  
+  // Otras relaciones
+  comentarios_tickets comentarios_tickets[]
+  historial_tickets   historial_tickets[]
+  notificaciones      notificaciones[]
+  derivaciones_tickets derivaciones_tickets[]
+  usuarios_en_copia   usuarios_en_copia[]
+  encuestas           encuestas[]
+  archivos_adjuntos   archivos_adjuntos[]
+  
+  @@index([rut], map: "idx_usuarios_rut")
+  @@map("usuarios")
+}
+
+model tickets {
+  id_ticket           Int       @id @default(autoincrement())
+  numero_ticket       String    @unique @db.VarChar(25)
+  asunto              String    @db.VarChar(150)
+  descripcion         String
+  id_solicitante      Int
+  asignado_a          Int?
+  id_departamento     Int
+  id_prioridad        Int
+  id_estado           Int
+  fecha_vencimiento   DateTime? @db.Timestamptz(6)
+  fecha_resolucion    DateTime? @db.Timestamptz(6)
+  fecha_cierre        DateTime? @db.Timestamptz(6)
+  fecha_creacion      DateTime? @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion DateTime? @default(now()) @db.Timestamptz(6)
+  
+  // Relaciones
+  solicitante         usuarios      @relation("TicketSolicitante", fields: [id_solicitante], references: [id_usuario])
+  responsable         usuarios?     @relation("TicketResponsable", fields: [asignado_a], references: [id_usuario])
+  departamento        departamentos @relation(fields: [id_departamento], references: [id_departamento])
+  prioridad           prioridades   @relation(fields: [id_prioridad], references: [id_prioridad])
+  estado              estados_ticket @relation(fields: [id_estado], references: [id_estado])
+  
+  // Entidades relacionadas
+  comentarios         comentarios_tickets[]
+  historial           historial_tickets[]
+  notificaciones      notificaciones[]
+  derivaciones        derivaciones_tickets[]
+  usuarios_en_copia   usuarios_en_copia[]
+  encuestas           encuestas[]
+  archivos_adjuntos   archivos_adjuntos[]
+  
+  @@map("tickets")
+}
+
+// ============ ENTIDADES RELACIONADAS ============
+
+model comentarios_tickets {
+  id_comentario   Int       @id @default(autoincrement())
+  id_ticket       Int
+  id_usuario      Int
+  comentario      String
+  es_interno      Boolean?  @default(false)
+  fecha_creacion  DateTime? @default(now()) @db.Timestamptz(6)
+  
+  // Relaciones
+  ticket          tickets   @relation(fields: [id_ticket], references: [id_ticket], onDelete: Cascade)
+  usuario         usuarios  @relation(fields: [id_usuario], references: [id_usuario])
+  
+  @@map("comentarios_tickets")
 }
 
 model historial_tickets {
-  id_his_ticket    Int       @id @default(autoincrement())
-  id_ticket        Int
-  id_usuario       Int
-  tipo_accion      String    @db.VarChar(30)
-  campo_modificado String    @db.VarChar(100)
-  valor_anterior   String?
-  valor_nuevo      String?
-  comentario       String?
-  fecha_creacion   DateTime? @default(now()) @db.Timestamptz(6)
+  id_historial    Int       @id @default(autoincrement())
+  id_ticket       Int
+  id_usuario      Int
+  tipo_accion     String    @db.VarChar(30)
+  campo_modificado String?  @db.VarChar(100)
+  valor_anterior  String?
+  valor_nuevo     String?
+  comentario      String?
+  fecha_creacion  DateTime? @default(now()) @db.Timestamptz(6)
+  
+  // Relaciones
+  ticket          tickets   @relation(fields: [id_ticket], references: [id_ticket], onDelete: Cascade)
+  usuario         usuarios  @relation(fields: [id_usuario], references: [id_usuario])
+  estado          estados_ticket? @relation(fields: [valor_nuevo], references: [nombre_estado])
+  
+  @@map("historial_tickets")
+}
+
+model derivaciones_tickets {
+  id_derivacion           Int           @id @default(autoincrement())
+  id_ticket               Int
+  id_departamento_origen  Int
+  id_departamento_destino Int
+  derivado_por            Int
+  motivo                  String?
+  fecha_creacion          DateTime?     @default(now()) @db.Timestamptz(6)
+  
+  // Relaciones
+  ticket                  tickets       @relation(fields: [id_ticket], references: [id_ticket], onDelete: Cascade)
+  departamento_origen     departamentos @relation("DepartamentoOrigen", fields: [id_departamento_origen], references: [id_departamento])
+  departamento_destino    departamentos @relation("DepartamentoDestino", fields: [id_departamento_destino], references: [id_departamento])
+  usuario                 usuarios      @relation(fields: [derivado_por], references: [id_usuario])
+  
+  @@map("derivaciones_tickets")
 }
 
 model notificaciones {
@@ -94,60 +196,12 @@ model notificaciones {
   correo_enviado     Boolean?  @default(false)
   fecha_envio_correo DateTime? @db.Timestamptz(6)
   fecha_creacion     DateTime? @default(now()) @db.Timestamptz(6)
-}
-
-model prioridades {
-  id_prioridad     Int    @id @default(autoincrement())
-  nombre_prioridad String @unique @db.VarChar(25)
-  nivel            Int    @unique
-}
-
-model roles {
-  id_rol     Int    @id @default(autoincrement())
-  nombre_rol String @unique @db.VarChar(25)
-  permisos   Json?
-}
-
-model sla_prioridades {
-  id_prioridad            Int       @id
-  tiempo_respuesta_horas  Int
-  tiempo_resolucion_horas Int
-  fecha_creacion          DateTime? @default(now()) @db.Timestamptz(6)
-}
-
-model tickets {
-  id_ticket           Int       @id @default(autoincrement())
-  numero_ticket       String    @unique @db.VarChar(25)
-  asunto              String    @db.VarChar(150)
-  descripcion         String
-  id_solicitante      Int
-  asignado_a          Int
-  id_departamento     Int
-  id_prioridad        Int
-  id_estado           Int
-  fecha_vencimiento   DateTime? @db.Timestamptz(6)
-  fecha_resolucion    DateTime? @db.Timestamptz(6)
-  fecha_cierre        DateTime? @db.Timestamptz(6)
-  fecha_creacion      DateTime? @default(now()) @db.Timestamptz(6)
-  fecha_actualizacion DateTime? @default(now()) @db.Timestamptz(6)
-}
-
-model usuarios {
-  id_usuario       Int       @id @default(autoincrement())
-  primer_nombre    String    @db.VarChar(25)
-  segundo_nombre   String?   @db.VarChar(25)
-  primer_apellido  String    @db.VarChar(25)
-  segundo_apellido String    @db.VarChar(25)
-  correo           String    @unique @db.VarChar(80)
-  hash_contrasena  String    @unique @db.VarChar(100)
-  id_rol           Int
-  id_departamento  Int?
-  ultimo_acceso    DateTime? @db.Timestamptz(6)
-  fecha_creacion   DateTime? @default(now()) @db.Timestamptz(6)
-  rut              String    @unique @db.VarChar(12)
-
-  @@index([rut], map: "idx_usuarios_rut")
-  @@map("usuarios")
+  
+  // Relaciones
+  usuario            usuarios  @relation(fields: [id_usuario], references: [id_usuario])
+  ticket             tickets   @relation(fields: [id_ticket], references: [id_ticket], onDelete: Cascade)
+  
+  @@map("notificaciones")
 }
 
 model usuarios_en_copia {
@@ -155,6 +209,73 @@ model usuarios_en_copia {
   id_usuario     Int
   agregado_por   Int
   fecha_creacion DateTime? @default(now()) @db.Timestamptz(6)
+  
+  // Relaciones
+  ticket         tickets  @relation(fields: [id_ticket], references: [id_ticket], onDelete: Cascade)
+  usuario        usuarios @relation(fields: [id_usuario], references: [id_usuario])
+  
+  @@id([id_ticket, id_usuario])
+  @@map("usuarios_en_copia")
+}
 
-  @@ignore
+model sla_prioridades {
+  id_prioridad            Int       @id
+  tiempo_respuesta_horas  Int
+  tiempo_resolucion_horas Int
+  fecha_creacion          DateTime? @default(now()) @db.Timestamptz(6)
+  
+  // Relaciones
+  prioridad               prioridades @relation(fields: [id_prioridad], references: [id_prioridad])
+  
+  @@map("sla_prioridades")
+}
+
+model encuestas {
+  id_encuesta    Int       @id @default(autoincrement())
+  id_ticket      Int
+  id_usuario     Int
+  calificacion   Int       // 1-5 estrellas
+  comentario     String?
+  enviado_por    Int
+  fecha_envio    DateTime? @db.Timestamptz(6)
+  respondida     Boolean?  @default(false)
+  fecha_creacion DateTime? @default(now()) @db.Timestamptz(6)
+  
+  // Relaciones
+  ticket         tickets   @relation(fields: [id_ticket], references: [id_ticket], onDelete: Cascade)
+  usuario        usuarios  @relation(fields: [id_usuario], references: [id_usuario])
+  
+  @@map("encuestas")
+}
+
+model archivos_adjuntos {
+  id_adjunto        Int       @id @default(autoincrement())
+  id_ticket         Int
+  id_comentario     Int?
+  nombre_almacenado String    @db.VarChar(120)
+  ruta_archivo      String    @db.VarChar(200)
+  tipo_mime         String    @db.VarChar(80)
+  tamano_archivo    Int
+  subido_por        Int
+  fecha_creacion    DateTime? @default(now()) @db.Timestamptz(6)
+  
+  // Relaciones
+  ticket            tickets   @relation(fields: [id_ticket], references: [id_ticket], onDelete: Cascade)
+  usuario           usuarios  @relation(fields: [subido_por], references: [id_usuario])
+  
+  @@map("archivos_adjuntos")
+}
+
+// ============ CONFIGURACIONES DEL SISTEMA ============
+
+model configuraciones_sistema {
+  id_configuracion    Int    @id @default(autoincrement())
+  clave               String    @unique @db.VarChar(80)
+  valor_configuracion String? @db.VarChar(120)
+  tipo_dato           String    @db.VarChar(20)
+  actualizado_por     Int?
+  fecha_creacion      DateTime? @default(now()) @db.Timestamptz(6)
+  fecha_actualizacion DateTime? @default(now()) @db.Timestamptz(6)
+  
+  @@map("configuraciones_sistema")
 }

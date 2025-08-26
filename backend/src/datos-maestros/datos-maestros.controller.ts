@@ -4,10 +4,22 @@ import {
   Param, 
   ParseIntPipe,
   HttpException,
-  HttpStatus
+  HttpStatus,
+  NotFoundException
 } from '@nestjs/common';
 import { DatosMaestrosService, DepartamentoDto, PrioridadDto, EstadoDto } from './datos-maestros.service';
-import { RespuestaApi } from '../interfaces/respuesta-api.interface';
+
+/**
+ * Interface para respuestas del API
+ * Debe coincidir con la interface que está en el archivo separado
+ */
+interface RespuestaApi<T> {
+  success: boolean;
+  data: T;
+  message: string;
+  error?: string;
+  timestamp?: string;
+}
 
 /**
  * Controlador para datos maestros del sistema
@@ -259,8 +271,9 @@ export class DatosMaestrosController {
 
   /**
    * Endpoint para validar múltiples datos de entrada (para formularios)
-   * POST /api/datos-maestros/validar
-   * @param datos - Datos a validar
+   * GET /api/datos-maestros/validar/:departamento/:prioridad
+   * @param idDepartamento - ID del departamento a validar
+   * @param idPrioridad - ID de la prioridad a validar
    * @returns Promise<RespuestaApi> - Resultado de validaciones
    */
   @Get('validar/:departamento/:prioridad')
