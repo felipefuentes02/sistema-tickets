@@ -1,15 +1,15 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Body, 
-  Patch, 
-  Param, 
-  Delete, 
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
   ParseIntPipe,
   UseGuards,
   Request,
-  Query
+  Query,
 } from '@nestjs/common';
 import { TicketsService } from './tickets.service';
 import { CrearTicketDto } from './dto/crear-ticket.dto';
@@ -30,16 +30,19 @@ export class TicketsController {
 
   // Obtener todos los tickets (admin) o filtrados por usuario
   @Get()
-  obtenerTodos(@Request() req, @Query('incluir_relaciones') incluirRelaciones?: string) {
+  obtenerTodos(
+    @Request() req,
+    @Query('incluir_relaciones') incluirRelaciones?: string,
+  ) {
     // Por ahora usaremos un ID fijo, luego implementaremos JWT
     // const idUsuario = req.user.sub;
     // const esAdmin = req.user.rol === 1; // Verificar si es admin
-    
+
     const idUsuario = 1; // ID temporal
     const esAdmin = false; // Por ahora no es admin
-    
+
     const incluir = incluirRelaciones === 'true';
-    
+
     if (esAdmin) {
       // Si es admin, obtener todos los tickets
       return this.ticketsService.obtenerTodos(undefined, incluir);
@@ -79,9 +82,9 @@ export class TicketsController {
   // Actualizar ticket
   @Patch(':id')
   actualizar(
-    @Param('id', ParseIntPipe) id: number, 
+    @Param('id', ParseIntPipe) id: number,
     @Body() actualizarTicketDto: ActualizarTicketDto,
-    @Request() req
+    @Request() req,
   ) {
     // Por ahora usaremos un ID fijo, luego implementaremos JWT
     // const idUsuario = req.user.sub;

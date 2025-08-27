@@ -3,7 +3,7 @@ import { CrearTicketDto } from './crear-ticket.dto';
 import { IsOptional, IsInt } from 'class-validator';
 
 export class ActualizarTicketDto extends PartialType(
-  OmitType(CrearTicketDto, ['id_solicitante'] as const)
+  OmitType(CrearTicketDto, ['id_solicitante'] as const),
 ) {
   @IsOptional()
   @IsInt()

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CrearTicketDto } from './dto/crear-ticket.dto';
 import { ActualizarTicketDto } from './dto/actualizar-ticket.dto';
@@ -9,7 +13,10 @@ export class TicketsService {
   constructor(private prisma: PrismaService) {}
 
   // Crear un nuevo ticket
-  async crear(crearTicketDto: CrearTicketDto, idUsuario: number): Promise<RespuestaTicketDto> {
+  async crear(
+    crearTicketDto: CrearTicketDto,
+    idUsuario: number,
+  ): Promise<RespuestaTicketDto> {
     // Generar número de ticket único
     const numeroTicket = await this.generarNumeroTicket();
 
@@ -27,22 +34,25 @@ export class TicketsService {
   }
 
   // Obtener todos los tickets (con filtros)
-  async obtenerTodos(idUsuario?: number, incluirRelaciones = false): Promise<RespuestaTicketDto[]> {
-  const whereClause = idUsuario ? { id_solicitante: idUsuario } : {};
-  
-  const tickets = await this.prisma.tickets.findMany({
-    where: whereClause,
-    // Comentamos el include por ahora hasta configurar las relaciones en Prisma
-    // include: incluirRelaciones ? {
-    //   // Aquí incluiremos las relaciones cuando estén configuradas en Prisma
-    // } : undefined,
-    orderBy: {
-      fecha_creacion: 'desc'
-    }
-        });
+  async obtenerTodos(
+    idUsuario?: number,
+    incluirRelaciones = false,
+  ): Promise<RespuestaTicketDto[]> {
+    const whereClause = idUsuario ? { id_solicitante: idUsuario } : {};
 
-        return tickets.map(ticket => this.formatearRespuesta(ticket));
-    }
+    const tickets = await this.prisma.tickets.findMany({
+      where: whereClause,
+      // Comentamos el include por ahora hasta configurar las relaciones en Prisma
+      // include: incluirRelaciones ? {
+      //   // Aquí incluiremos las relaciones cuando estén configuradas en Prisma
+      // } : undefined,
+      orderBy: {
+        fecha_creacion: 'desc',
+      },
+    });
+
+    return tickets.map((ticket) => this.formatearRespuesta(ticket));
+  }
 
   // Obtener tickets del usuario actual
   async obtenerMisTickets(idUsuario: number): Promise<RespuestaTicketDto[]> {
@@ -50,14 +60,19 @@ export class TicketsService {
   }
 
   // Obtener tickets donde el usuario está en copia
-  async obtenerTicketsEnCopia(idUsuario: number): Promise<RespuestaTicketDto[]> {
+  async obtenerTicketsEnCopia(
+    idUsuario: number,
+  ): Promise<RespuestaTicketDto[]> {
     // TODO: Implementar cuando tengamos la tabla usuarios_en_copia
     // Por ahora retornamos array vacío
     return [];
   }
 
   // Obtener ticket por ID
-  async obtenerPorId(id: number, idUsuario?: number): Promise<RespuestaTicketDto> {
+  async obtenerPorId(
+    id: number,
+    idUsuario?: number,
+  ): Promise<RespuestaTicketDto> {
     const ticket = await this.prisma.tickets.findUnique({
       where: { id_ticket: id },
       // include: {} // Incluir relaciones cuando estén configuradas
@@ -76,7 +91,11 @@ export class TicketsService {
   }
 
   // Actualizar ticket
-  async actualizar(id: number, actualizarTicketDto: ActualizarTicketDto, idUsuario?: number): Promise<RespuestaTicketDto> {
+  async actualizar(
+    id: number,
+    actualizarTicketDto: ActualizarTicketDto,
+    idUsuario?: number,
+  ): Promise<RespuestaTicketDto> {
     // Verificar que el ticket existe y el usuario tiene acceso
     await this.obtenerPorId(id, idUsuario);
 
@@ -85,7 +104,7 @@ export class TicketsService {
       data: {
         ...actualizarTicketDto,
         fecha_actualizacion: new Date(),
-      }
+      },
     });
 
     return this.formatearRespuesta(ticketActualizado);
@@ -96,7 +115,7 @@ export class TicketsService {
     await this.obtenerPorId(id, idUsuario);
 
     await this.prisma.tickets.delete({
-      where: { id_ticket: id }
+      where: { id_ticket: id },
     });
 
     return { mensaje: 'Ticket eliminado exitosamente' };
@@ -107,17 +126,17 @@ export class TicketsService {
     const fecha = new Date();
     const año = fecha.getFullYear();
     const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-    
+
     // Obtener el último ticket del mes para generar secuencial
     const ultimoTicket = await this.prisma.tickets.findFirst({
       where: {
         numero_ticket: {
-          startsWith: `TK${año}${mes}`
-        }
+          startsWith: `TK${año}${mes}`,
+        },
       },
       orderBy: {
-        numero_ticket: 'desc'
-      }
+        numero_ticket: 'desc',
+      },
     });
 
     let secuencial = 1;

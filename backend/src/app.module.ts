@@ -21,17 +21,18 @@ import { AdminModule } from './admin/admin.module';
     // Configuración global de JWT
     JwtModule.register({
       global: true, // Hace que JWT esté disponible globalmente
-      secret: process.env.JWT_SECRET || 'secreto-super-secreto-cambiar-en-produccion',
-      signOptions: { 
-        expiresIn: process.env.JWT_EXPIRES_IN || '24h' 
+      secret:
+        process.env.JWT_SECRET || 'secreto-super-secreto-cambiar-en-produccion',
+      signOptions: {
+        expiresIn: process.env.JWT_EXPIRES_IN || '24h',
       },
     }),
 
     // Módulos de la aplicación
-    PrismaModule,    // Acceso a base de datos
-    AuthModule,      // Autenticación y autorización
-    TicketsModule,   // Gestión de tickets
-    AdminModule,     // Funcionalidades administrativas (NUEVO)
+    PrismaModule, // Acceso a base de datos
+    AuthModule, // Autenticación y autorización
+    TicketsModule, // Gestión de tickets
+    AdminModule, // Funcionalidades administrativas (NUEVO)
   ],
   controllers: [],
   providers: [],

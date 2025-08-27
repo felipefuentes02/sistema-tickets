@@ -13,7 +13,7 @@ export class RespuestaTicketDto {
   fecha_cierre?: Date;
   fecha_creacion: Date;
   fecha_actualizacion?: Date;
-  
+
   // Información relacionada (cuando se incluya)
   solicitante?: {
     id_usuario: number;
@@ -21,18 +21,18 @@ export class RespuestaTicketDto {
     primer_apellido: string;
     correo: string;
   };
-  
+
   departamento?: {
     id_departamento: number;
     nombre_departamento: string;
   };
-  
+
   prioridad?: {
     id_prioridad: number;
     nombre_prioridad: string;
     nivel: number;
   };
-  
+
   estado?: {
     id_estado: number;
     nombre_estado: string;

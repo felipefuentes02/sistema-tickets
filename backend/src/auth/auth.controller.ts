@@ -10,7 +10,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: LoginDto) {
     console.log('Login request recibido:', loginDto);
-    
+
     try {
       const result = await this.authService.login(loginDto);
       console.log('Login result:', result);

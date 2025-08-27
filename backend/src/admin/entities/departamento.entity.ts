@@ -10,7 +10,7 @@ import {
   ParseIntPipe,
   UseGuards,
   HttpStatus,
-  HttpCode
+  HttpCode,
 } from '@nestjs/common';
 import { AdminService } from '../admin.service';
 import { CrearUsuarioDto } from '../dto/crear-usuario.dto';
@@ -38,7 +38,7 @@ export class AdminController {
     @Query('rol') rol?: string,
     @Query('activo') activo?: string,
     @Query('pagina') pagina: string = '1',
-    @Query('limite') limite: string = '10'
+    @Query('limite') limite: string = '10',
   ) {
     try {
       const filtros = {
@@ -47,22 +47,22 @@ export class AdminController {
         rol,
         activo: activo !== undefined ? activo === 'true' : undefined,
         pagina: parseInt(pagina),
-        limite: parseInt(limite)
+        limite: parseInt(limite),
       };
 
       const usuarios = await this.adminService.obtenerUsuarios(filtros);
-      
+
       return {
         success: true,
         data: usuarios,
-        message: 'Usuarios obtenidos correctamente'
+        message: 'Usuarios obtenidos correctamente',
       };
     } catch (error) {
       return {
         success: false,
         data: null,
         message: 'Error al obtener usuarios',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -75,26 +75,26 @@ export class AdminController {
   async obtenerUsuarioPorId(@Param('id', ParseIntPipe) id: number) {
     try {
       const usuario = await this.adminService.obtenerUsuarioPorId(id);
-      
+
       if (!usuario) {
         return {
           success: false,
           data: null,
-          message: 'Usuario no encontrado'
+          message: 'Usuario no encontrado',
         };
       }
 
       return {
         success: true,
         data: usuario,
-        message: 'Usuario obtenido correctamente'
+        message: 'Usuario obtenido correctamente',
       };
     } catch (error) {
       return {
         success: false,
         data: null,
         message: 'Error al obtener usuario',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -108,18 +108,18 @@ export class AdminController {
   async crearUsuario(@Body() crearUsuarioDto: CrearUsuarioDto) {
     try {
       const usuario = await this.adminService.crearUsuario(crearUsuarioDto);
-      
+
       return {
         success: true,
         data: usuario,
-        message: 'Usuario creado correctamente'
+        message: 'Usuario creado correctamente',
       };
     } catch (error) {
       return {
         success: false,
         data: null,
         message: 'Error al crear usuario',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -131,22 +131,25 @@ export class AdminController {
   @Put('usuarios/:id')
   async actualizarUsuario(
     @Param('id', ParseIntPipe) id: number,
-    @Body() actualizarUsuarioDto: ActualizarUsuarioDto
+    @Body() actualizarUsuarioDto: ActualizarUsuarioDto,
   ) {
     try {
-      const usuario = await this.adminService.actualizarUsuario(id, actualizarUsuarioDto);
-      
+      const usuario = await this.adminService.actualizarUsuario(
+        id,
+        actualizarUsuarioDto,
+      );
+
       return {
         success: true,
         data: usuario,
-        message: 'Usuario actualizado correctamente'
+        message: 'Usuario actualizado correctamente',
       };
     } catch (error) {
       return {
         success: false,
         data: null,
         message: 'Error al actualizar usuario',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -159,18 +162,18 @@ export class AdminController {
   async eliminarUsuario(@Param('id', ParseIntPipe) id: number) {
     try {
       await this.adminService.eliminarUsuario(id);
-      
+
       return {
         success: true,
         data: null,
-        message: 'Usuario eliminado correctamente'
+        message: 'Usuario eliminado correctamente',
       };
     } catch (error) {
       return {
         success: false,
         data: null,
         message: 'Error al eliminar usuario',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -185,22 +188,23 @@ export class AdminController {
   async obtenerDepartamentos(@Query('activo') activo?: string) {
     try {
       const filtros = {
-        activo: activo !== undefined ? activo === 'true' : undefined
+        activo: activo !== undefined ? activo === 'true' : undefined,
       };
 
-      const departamentos = await this.adminService.obtenerDepartamentos(filtros);
-      
+      const departamentos =
+        await this.adminService.obtenerDepartamentos(filtros);
+
       return {
         success: true,
         data: departamentos,
-        message: 'Departamentos obtenidos correctamente'
+        message: 'Departamentos obtenidos correctamente',
       };
     } catch (error) {
       return {
         success: false,
         data: null,
         message: 'Error al obtener departamentos',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -213,26 +217,26 @@ export class AdminController {
   async obtenerDepartamentoPorId(@Param('id', ParseIntPipe) id: number) {
     try {
       const departamento = await this.adminService.obtenerDepartamentoPorId(id);
-      
+
       if (!departamento) {
         return {
           success: false,
           data: null,
-          message: 'Departamento no encontrado'
+          message: 'Departamento no encontrado',
         };
       }
 
       return {
         success: true,
         data: departamento,
-        message: 'Departamento obtenido correctamente'
+        message: 'Departamento obtenido correctamente',
       };
     } catch (error) {
       return {
         success: false,
         data: null,
         message: 'Error al obtener departamento',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -246,25 +250,25 @@ export class AdminController {
   @Get('usuarios/validar-email')
   async validarEmail(
     @Query('email') email: string,
-    @Query('usuarioId') usuarioId?: string
+    @Query('usuarioId') usuarioId?: string,
   ) {
     try {
       const disponible = await this.adminService.validarEmail(
         email,
-        usuarioId ? parseInt(usuarioId) : undefined
+        usuarioId ? parseInt(usuarioId) : undefined,
       );
-      
+
       return {
         success: true,
         disponible,
-        message: disponible ? 'Email disponible' : 'Email ya está en uso'
+        message: disponible ? 'Email disponible' : 'Email ya está en uso',
       };
     } catch (error) {
       return {
         success: false,
         disponible: false,
         message: 'Error al validar email',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -276,25 +280,25 @@ export class AdminController {
   @Get('usuarios/validar-rut')
   async validarRut(
     @Query('rut') rut: string,
-    @Query('usuarioId') usuarioId?: string
+    @Query('usuarioId') usuarioId?: string,
   ) {
     try {
       const disponible = await this.adminService.validarRut(
         rut,
-        usuarioId ? parseInt(usuarioId) : undefined
+        usuarioId ? parseInt(usuarioId) : undefined,
       );
-      
+
       return {
         success: true,
         disponible,
-        message: disponible ? 'RUT disponible' : 'RUT ya está en uso'
+        message: disponible ? 'RUT disponible' : 'RUT ya está en uso',
       };
     } catch (error) {
       return {
         success: false,
         disponible: false,
         message: 'Error al validar RUT',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -309,18 +313,18 @@ export class AdminController {
   async obtenerResumenEmpresa() {
     try {
       const resumen = await this.adminService.obtenerResumenEmpresa();
-      
+
       return {
         success: true,
         data: resumen,
-        message: 'Resumen obtenido correctamente'
+        message: 'Resumen obtenido correctamente',
       };
     } catch (error) {
       return {
         success: false,
         data: null,
         message: 'Error al obtener resumen',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -333,18 +337,18 @@ export class AdminController {
   async obtenerMetricasDepartamentos() {
     try {
       const metricas = await this.adminService.obtenerMetricasDepartamentos();
-      
+
       return {
         success: true,
         data: metricas,
-        message: 'Métricas obtenidas correctamente'
+        message: 'Métricas obtenidas correctamente',
       };
     } catch (error) {
       return {
         success: false,
         data: null,
         message: 'Error al obtener métricas',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -357,18 +361,18 @@ export class AdminController {
   async obtenerMetricasDepartamento(@Param('id', ParseIntPipe) id: number) {
     try {
       const metricas = await this.adminService.obtenerMetricasDepartamento(id);
-      
+
       return {
         success: true,
         data: metricas,
-        message: 'Métricas del departamento obtenidas correctamente'
+        message: 'Métricas del departamento obtenidas correctamente',
       };
     } catch (error) {
       return {
         success: false,
         data: null,
         message: 'Error al obtener métricas del departamento',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -378,21 +382,25 @@ export class AdminController {
    * GET /api/admin/tendencia-mensual
    */
   @Get('tendencia-mensual')
-  async obtenerTendenciaMensual(@Query('meses') meses: string = '6'): Promise<any> {
+  async obtenerTendenciaMensual(
+    @Query('meses') meses: string = '6',
+  ): Promise<any> {
     try {
-      const tendencia = await this.adminService.obtenerTendenciaMensual(parseInt(meses));
-      
+      const tendencia = await this.adminService.obtenerTendenciaMensual(
+        parseInt(meses),
+      );
+
       return {
         success: true,
         data: tendencia,
-        message: 'Tendencia mensual obtenida correctamente'
+        message: 'Tendencia mensual obtenida correctamente',
       };
     } catch (error) {
       return {
         success: false,
         data: null,
         message: 'Error al obtener tendencia mensual',
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -405,18 +413,18 @@ export class AdminController {
   async obtenerTicketsPorEstado(@Query('departamento') departamento?: string) {
     try {
       const distribucion = await this.adminService.obtenerTicketsPorEstado();
-      
+
       return {
         success: true,
         data: distribucion,
-        message: 'Distribución por estado obtenida correctamente'
+        message: 'Distribución por estado obtenida correctamente',
       };
     } catch (error) {
       return {
         success: false,
         data: null,
         message: 'Error al obtener distribución por estado',
-        error: error.message
+        error: error.message,
       };
     }
   }

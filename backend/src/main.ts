@@ -4,7 +4,7 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
+
   // Configurar CORS para desarrollo
   app.enableCors({
     origin: 'http://localhost:8100', // URL del frontend Ionic

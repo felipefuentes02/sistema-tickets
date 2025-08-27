@@ -7,7 +7,6 @@ import { PrismaClient } from '@prisma/client';
  */
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
-  
   /**
    * Inicializa la conexión a la base de datos al cargar el módulo
    */

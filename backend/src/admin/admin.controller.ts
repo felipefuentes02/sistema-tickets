@@ -1,15 +1,15 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Put, 
-  Delete, 
-  Body, 
-  Param, 
-  Query, 
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
   ParseIntPipe,
   HttpException,
-  HttpStatus
+  HttpStatus,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 
@@ -46,7 +46,6 @@ interface ActualizarUsuarioDto {
  */
 @Controller('api/admin')
 export class AdminController {
-  
   constructor(private readonly adminService: AdminService) {}
 
   // ============ ENDPOINTS DE USUARIOS ============
@@ -59,23 +58,25 @@ export class AdminController {
   async obtenerUsuarios(@Query() filtros: any) {
     try {
       console.log('📥 GET /api/admin/usuarios - Filtros:', filtros);
-      
+
       const usuarios = await this.adminService.obtenerUsuarios(filtros);
-      
+
       return {
         success: true,
         data: usuarios,
-        message: `${usuarios.length} usuarios obtenidos correctamente`
+        message: `${usuarios.length} usuarios obtenidos correctamente`,
       };
-
     } catch (error) {
       console.error('❌ Error en GET /usuarios:', error);
-      throw new HttpException({
-        success: false,
-        data: [],
-        message: 'Error al obtener usuarios',
-        error: error.message
-      }, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        {
+          success: false,
+          data: [],
+          message: 'Error al obtener usuarios',
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -87,27 +88,29 @@ export class AdminController {
   async obtenerUsuarioPorId(@Param('id', ParseIntPipe) id: number) {
     try {
       console.log(`📥 GET /api/admin/usuarios/${id}`);
-      
+
       const usuario = await this.adminService.obtenerUsuarioPorId(id);
-      
+
       return {
         success: true,
         data: usuario,
-        message: 'Usuario obtenido correctamente'
+        message: 'Usuario obtenido correctamente',
       };
-
     } catch (error) {
       console.error(`❌ Error en GET /usuarios/${id}:`, error);
-      
+
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       const message = error.message || 'Error al obtener usuario';
-      
-      throw new HttpException({
-        success: false,
-        data: null,
-        message,
-        error: error.message
-      }, status);
+
+      throw new HttpException(
+        {
+          success: false,
+          data: null,
+          message,
+          error: error.message,
+        },
+        status,
+      );
     }
   }
 
@@ -121,33 +124,35 @@ export class AdminController {
       console.log('📥 POST /api/admin/usuarios - Datos:', {
         ...crearUsuarioDto,
         contrasena: '[OCULTA]',
-        confirmar_contrasena: '[OCULTA]'
+        confirmar_contrasena: '[OCULTA]',
       });
 
       // Validar que las contraseñas coincidan
       if (crearUsuarioDto.contrasena !== crearUsuarioDto.confirmar_contrasena) {
-        throw new HttpException({
-          success: false,
-          data: null,
-          message: 'Las contraseñas no coinciden',
-          error: 'PASSWORDS_MISMATCH'
-        }, HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          {
+            success: false,
+            data: null,
+            message: 'Las contraseñas no coinciden',
+            error: 'PASSWORDS_MISMATCH',
+          },
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       const usuario = await this.adminService.crearUsuario(crearUsuarioDto);
-      
+
       return {
         success: true,
         data: usuario,
-        message: 'Usuario creado correctamente'
+        message: 'Usuario creado correctamente',
       };
-
     } catch (error) {
       console.error('❌ Error en POST /usuarios:', error);
-      
+
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       let message = 'Error al crear usuario';
-      
+
       // Manejar errores específicos
       if (error.message.includes('email')) {
         message = 'El email ya está registrado';
@@ -156,13 +161,16 @@ export class AdminController {
       } else if (error.message.includes('departamento')) {
         message = error.message;
       }
-      
-      throw new HttpException({
-        success: false,
-        data: null,
-        message,
-        error: error.message
-      }, status);
+
+      throw new HttpException(
+        {
+          success: false,
+          data: null,
+          message,
+          error: error.message,
+        },
+        status,
+      );
     }
   }
 
@@ -173,34 +181,39 @@ export class AdminController {
   @Put('usuarios/:id')
   async actualizarUsuario(
     @Param('id', ParseIntPipe) id: number,
-    @Body() actualizarUsuarioDto: ActualizarUsuarioDto
+    @Body() actualizarUsuarioDto: ActualizarUsuarioDto,
   ) {
     try {
       console.log(`📥 PUT /api/admin/usuarios/${id} - Datos:`, {
         ...actualizarUsuarioDto,
-        contrasena: actualizarUsuarioDto.contrasena ? '[OCULTA]' : undefined
+        contrasena: actualizarUsuarioDto.contrasena ? '[OCULTA]' : undefined,
       });
 
-      const usuario = await this.adminService.actualizarUsuario(id, actualizarUsuarioDto);
-      
+      const usuario = await this.adminService.actualizarUsuario(
+        id,
+        actualizarUsuarioDto,
+      );
+
       return {
         success: true,
         data: usuario,
-        message: 'Usuario actualizado correctamente'
+        message: 'Usuario actualizado correctamente',
       };
-
     } catch (error) {
       console.error(`❌ Error en PUT /usuarios/${id}:`, error);
-      
+
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       const message = error.message || 'Error al actualizar usuario';
-      
-      throw new HttpException({
-        success: false,
-        data: null,
-        message,
-        error: error.message
-      }, status);
+
+      throw new HttpException(
+        {
+          success: false,
+          data: null,
+          message,
+          error: error.message,
+        },
+        status,
+      );
     }
   }
 
@@ -214,25 +227,27 @@ export class AdminController {
       console.log(`📥 DELETE /api/admin/usuarios/${id}`);
 
       await this.adminService.eliminarUsuario(id);
-      
+
       return {
         success: true,
         data: true,
-        message: 'Usuario eliminado correctamente'
+        message: 'Usuario eliminado correctamente',
       };
-
     } catch (error) {
       console.error(`❌ Error en DELETE /usuarios/${id}:`, error);
-      
+
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
       const message = error.message || 'Error al eliminar usuario';
-      
-      throw new HttpException({
-        success: false,
-        data: false,
-        message,
-        error: error.message
-      }, status);
+
+      throw new HttpException(
+        {
+          success: false,
+          data: false,
+          message,
+          error: error.message,
+        },
+        status,
+      );
     }
   }
 
@@ -246,23 +261,25 @@ export class AdminController {
   async obtenerDepartamentos() {
     try {
       console.log('📥 GET /api/admin/departamentos');
-      
+
       const departamentos = await this.adminService.obtenerDepartamentos();
-      
+
       return {
         success: true,
         data: departamentos,
-        message: `${departamentos.length} departamentos obtenidos correctamente`
+        message: `${departamentos.length} departamentos obtenidos correctamente`,
       };
-
     } catch (error) {
       console.error('❌ Error en GET /departamentos:', error);
-      throw new HttpException({
-        success: false,
-        data: [],
-        message: 'Error al obtener departamentos',
-        error: error.message
-      }, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        {
+          success: false,
+          data: [],
+          message: 'Error al obtener departamentos',
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -275,42 +292,49 @@ export class AdminController {
   @Get('validar-rut')
   async validarRutDisponible(
     @Query('rut') rut: string,
-    @Query('usuarioId') usuarioId?: string
+    @Query('usuarioId') usuarioId?: string,
   ) {
     try {
-      console.log(`📥 GET /api/admin/validar-rut?rut=${rut}&usuarioId=${usuarioId}`);
+      console.log(
+        `📥 GET /api/admin/validar-rut?rut=${rut}&usuarioId=${usuarioId}`,
+      );
 
       if (!rut) {
-        throw new HttpException({
-          success: false,
-          data: false,
-          message: 'RUT es requerido',
-          error: 'MISSING_RUT'
-        }, HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          {
+            success: false,
+            data: false,
+            message: 'RUT es requerido',
+            error: 'MISSING_RUT',
+          },
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       const disponible = await this.adminService.validarRutDisponible(
-        rut, 
-        usuarioId ? parseInt(usuarioId) : undefined
+        rut,
+        usuarioId ? parseInt(usuarioId) : undefined,
       );
-      
+
       return {
         success: true,
         data: disponible,
-        message: disponible ? 'RUT disponible' : 'RUT ya está en uso'
+        message: disponible ? 'RUT disponible' : 'RUT ya está en uso',
       };
-
     } catch (error) {
       console.error('❌ Error en GET /validar-rut:', error);
-      
+
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
-      
-      throw new HttpException({
-        success: false,
-        data: false,
-        message: 'Error al validar RUT',
-        error: error.message
-      }, status);
+
+      throw new HttpException(
+        {
+          success: false,
+          data: false,
+          message: 'Error al validar RUT',
+          error: error.message,
+        },
+        status,
+      );
     }
   }
 
@@ -321,42 +345,49 @@ export class AdminController {
   @Get('validar-email')
   async validarEmailDisponible(
     @Query('email') email: string,
-    @Query('usuarioId') usuarioId?: string
+    @Query('usuarioId') usuarioId?: string,
   ) {
     try {
-      console.log(`📥 GET /api/admin/validar-email?email=${email}&usuarioId=${usuarioId}`);
+      console.log(
+        `📥 GET /api/admin/validar-email?email=${email}&usuarioId=${usuarioId}`,
+      );
 
       if (!email) {
-        throw new HttpException({
-          success: false,
-          data: false,
-          message: 'Email es requerido',
-          error: 'MISSING_EMAIL'
-        }, HttpStatus.BAD_REQUEST);
+        throw new HttpException(
+          {
+            success: false,
+            data: false,
+            message: 'Email es requerido',
+            error: 'MISSING_EMAIL',
+          },
+          HttpStatus.BAD_REQUEST,
+        );
       }
 
       const disponible = await this.adminService.validarEmailDisponible(
-        email, 
-        usuarioId ? parseInt(usuarioId) : undefined
+        email,
+        usuarioId ? parseInt(usuarioId) : undefined,
       );
-      
+
       return {
         success: true,
         data: disponible,
-        message: disponible ? 'Email disponible' : 'Email ya está en uso'
+        message: disponible ? 'Email disponible' : 'Email ya está en uso',
       };
-
     } catch (error) {
       console.error('❌ Error en GET /validar-email:', error);
-      
+
       const status = error.status || HttpStatus.INTERNAL_SERVER_ERROR;
-      
-      throw new HttpException({
-        success: false,
-        data: false,
-        message: 'Error al validar email',
-        error: error.message
-      }, status);
+
+      throw new HttpException(
+        {
+          success: false,
+          data: false,
+          message: 'Error al validar email',
+          error: error.message,
+        },
+        status,
+      );
     }
   }
 
@@ -370,29 +401,31 @@ export class AdminController {
   async obtenerMetricas() {
     try {
       console.log('📥 GET /api/admin/metricas');
-      
+
       // TODO: Implementar métricas reales
       const metricas = {
         usuariosTotales: 0,
         usuariosActivos: 0,
         departamentos: 4,
-        ticketsAbiertos: 0
+        ticketsAbiertos: 0,
       };
-      
+
       return {
         success: true,
         data: metricas,
-        message: 'Métricas obtenidas correctamente'
+        message: 'Métricas obtenidas correctamente',
       };
-
     } catch (error) {
       console.error('❌ Error en GET /metricas:', error);
-      throw new HttpException({
-        success: false,
-        data: null,
-        message: 'Error al obtener métricas',
-        error: error.message
-      }, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        {
+          success: false,
+          data: null,
+          message: 'Error al obtener métricas',
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }

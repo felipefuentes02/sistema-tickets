@@ -1,4 +1,31 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+  "compilerOptions": {
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "incremental": false,
+    "removeComments": true,
+    "skipLibCheck": true,
+    "noEmitOnError": true,
+    "baseUrl": "./",
+    "rootDir": "./src",
+    "outDir": "./dist"
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules", 
+    "dist",
+    "coverage",
+    "test",
+    "**/*spec.ts",
+    "**/*test.ts",
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "**/*.e2e-spec.ts",
+    "jest.config.js",
+    "prisma/seed.ts"
+  ]
 }
