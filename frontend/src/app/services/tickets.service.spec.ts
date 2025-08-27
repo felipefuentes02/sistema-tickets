@@ -1,5 +1,4 @@
 import { TestBed } from '@angular/core/testing';
-
 import { TicketsService } from './tickets.service';
 
 describe('TicketsService', () => {
@@ -14,3 +13,4 @@ describe('TicketsService', () => {
     expect(service).toBeTruthy();
   });
 });
+
