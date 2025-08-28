@@ -1,15 +1,8 @@
-<<<<<<< HEAD
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-=======
 import { 
   Injectable, 
   NotFoundException, 
   ForbiddenException,
   BadRequestException
->>>>>>> 776b6d3d4b4aea9daffab5f570b29bdac448455d
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CrearTicketDto } from './dto/crear-ticket.dto';
@@ -25,15 +18,6 @@ import { RespuestaTicketDto } from './dto/respuesta-ticket.dto';
 export class TicketsService {
   constructor(private prisma: PrismaService) {}
 
-<<<<<<< HEAD
-  // Crear un nuevo ticket
-  async crear(
-    crearTicketDto: CrearTicketDto,
-    idUsuario: number,
-  ): Promise<RespuestaTicketDto> {
-    // Generar número de ticket único
-    const numeroTicket = await this.generarNumeroTicket();
-=======
   /**
    * Crear un nuevo ticket
    * @param crearTicketDto - Datos del ticket a crear
@@ -48,13 +32,11 @@ export class TicketsService {
         departamento: crearTicketDto.id_departamento,
         prioridad: crearTicketDto.id_prioridad
       });
->>>>>>> 776b6d3d4b4aea9daffab5f570b29bdac448455d
 
       // Validar que el departamento existe y está activo
       const departamento = await this.prisma.departamentos.findUnique({
         where: { 
-          id_departamento: crearTicketDto.id_departamento,
-          activo: true
+          id_departamento: crearTicketDto.id_departamento
         }
       });
 
@@ -95,280 +77,113 @@ export class TicketsService {
           id_solicitante: idUsuario,
           id_departamento: crearTicketDto.id_departamento,
           id_prioridad: crearTicketDto.id_prioridad,
-          id_estado: 1, // Estado "Nuevo" por defecto
+          id_estado: 1, // Estado inicial: "Nuevo"
           fecha_vencimiento: fechaVencimiento,
-          // Por ahora no asignamos responsable automáticamente
-          // asignado_a: await this.asignarResponsableAutomatico(crearTicketDto.id_departamento)
         },
+        include: {
+          solicitante: true,
+          departamento: true,
+          prioridad: true,
+          estado: true
+        }
       });
 
       console.log('✅ Ticket creado exitosamente:', {
         id: nuevoTicket.id_ticket,
         numero: nuevoTicket.numero_ticket,
-        estado: nuevoTicket.id_estado
+        asunto: nuevoTicket.asunto
       });
 
-      // Formatear respuesta
       return this.formatearRespuesta(nuevoTicket);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error al crear ticket:', error);
       throw error;
     }
   }
 
-<<<<<<< HEAD
-  // Obtener todos los tickets (con filtros)
+  /**
+   * Obtener todos los tickets con filtros opcionales
+   * @param idUsuario - ID del usuario (null para admin que ve todos)
+   * @param incluirRelaciones - Si incluir datos relacionados
+   * @returns Promise<RespuestaTicketDto[]>
+   */
   async obtenerTodos(
     idUsuario?: number,
     incluirRelaciones = false,
   ): Promise<RespuestaTicketDto[]> {
-    const whereClause = idUsuario ? { id_solicitante: idUsuario } : {};
-
-    const tickets = await this.prisma.tickets.findMany({
-      where: whereClause,
-      // Comentamos el include por ahora hasta configurar las relaciones en Prisma
-      // include: incluirRelaciones ? {
-      //   // Aquí incluiremos las relaciones cuando estén configuradas en Prisma
-      // } : undefined,
-      orderBy: {
-        fecha_creacion: 'desc',
-      },
-    });
-
-    return tickets.map((ticket) => this.formatearRespuesta(ticket));
-  }
-=======
-  /**
-   * Obtener todos los tickets (con filtros opcionales)
-   * @param idUsuario - ID del usuario (si se especifica, filtra por usuario)
-   * @param incluirRelaciones - Si incluir datos relacionados
-   * @returns Promise<RespuestaTicketDto[]> - Lista de tickets
-   */
-  async obtenerTodos(idUsuario?: number, incluirRelaciones = false): Promise<RespuestaTicketDto[]> {
     try {
-      console.log('📋 Obteniendo tickets:', {
-        filtrarPorUsuario: !!idUsuario,
-        usuario: idUsuario,
-        incluirRelaciones
-      });
-
       const whereClause = idUsuario ? { id_solicitante: idUsuario } : {};
-      
-      const tickets = await this.prisma.tickets.findMany({
-        where: whereClause,
-        // Incluir relaciones si se solicita
-        include: incluirRelaciones ? {
-          solicitante: {
-            select: {
-              id_usuario: true,
-              primer_nombre: true,
-              primer_apellido: true,
-              correo: true
-            }
+
+      if (incluirRelaciones) {
+        const tickets = await this.prisma.tickets.findMany({
+          where: whereClause,
+          include: {
+            solicitante: true,
+            departamento: true,
+            prioridad: true,
+            estado: true,
+            responsable: true,
           },
-          responsable: {
-            select: {
-              id_usuario: true,
-              primer_nombre: true,
-              primer_apellido: true,
-              correo: true
-            }
-          },
-          departamento: {
-            select: {
-              id_departamento: true,
-              nombre_departamento: true
-            }
-          },
-          prioridad: {
-            select: {
-              id_prioridad: true,
-              nombre_prioridad: true,
-              nivel: true
-            }
-          },
-          estado: {
-            select: {
-              id_estado: true,
-              nombre_estado: true
-            }
+          orderBy: {
+            fecha_creacion: 'desc'
           }
-        } : undefined,
-        orderBy: {
-          fecha_creacion: 'desc'
-        }
-      });
->>>>>>> 776b6d3d4b4aea9daffab5f570b29bdac448455d
+        });
 
-      console.log(`✅ ${tickets.length} tickets obtenidos correctamente`);
+        console.log(`✅ ${tickets.length} tickets obtenidos correctamente`);
+        return tickets.map((ticket) => this.formatearRespuesta(ticket));
+      } else {
+        const tickets = await this.prisma.tickets.findMany({
+          where: whereClause,
+          orderBy: {
+            fecha_creacion: 'desc'
+          }
+        });
 
-      return tickets.map(ticket => this.formatearRespuesta(ticket));
+        console.log(`✅ ${tickets.length} tickets obtenidos correctamente`);
+        return tickets.map((ticket) => this.formatearRespuesta(ticket));
+      }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error al obtener tickets:', error);
       throw error;
     }
   }
 
   /**
-   * Obtener tickets del usuario actual
+   * Obtener tickets del usuario específico
    * @param idUsuario - ID del usuario
-   * @returns Promise<RespuestaTicketDto[]> - Tickets del usuario
+   * @returns Promise<RespuestaTicketDto[]>
    */
   async obtenerMisTickets(idUsuario: number): Promise<RespuestaTicketDto[]> {
     console.log(`👤 Obteniendo mis tickets para usuario: ${idUsuario}`);
     return this.obtenerTodos(idUsuario, true);
   }
 
-<<<<<<< HEAD
-  // Obtener tickets donde el usuario está en copia
-  async obtenerTicketsEnCopia(
-    idUsuario: number,
-  ): Promise<RespuestaTicketDto[]> {
-    // TODO: Implementar cuando tengamos la tabla usuarios_en_copia
-    // Por ahora retornamos array vacío
-    return [];
-  }
-
-  // Obtener ticket por ID
-  async obtenerPorId(
-    id: number,
-    idUsuario?: number,
-  ): Promise<RespuestaTicketDto> {
-    const ticket = await this.prisma.tickets.findUnique({
-      where: { id_ticket: id },
-      // include: {} // Incluir relaciones cuando estén configuradas
-    });
-
-    if (!ticket) {
-      throw new NotFoundException('Ticket no encontrado');
-    }
-
-    // Verificar si el usuario tiene acceso al ticket
-    if (idUsuario && ticket.id_solicitante !== idUsuario) {
-      throw new ForbiddenException('No tiene acceso a este ticket');
-    }
-
-    return this.formatearRespuesta(ticket);
-  }
-
-  // Actualizar ticket
-  async actualizar(
-    id: number,
-    actualizarTicketDto: ActualizarTicketDto,
-    idUsuario?: number,
-  ): Promise<RespuestaTicketDto> {
-    // Verificar que el ticket existe y el usuario tiene acceso
-    await this.obtenerPorId(id, idUsuario);
-
-    const ticketActualizado = await this.prisma.tickets.update({
-      where: { id_ticket: id },
-      data: {
-        ...actualizarTicketDto,
-        fecha_actualizacion: new Date(),
-      },
-    });
-
-    return this.formatearRespuesta(ticketActualizado);
-  }
-
-  // Eliminar ticket (solo el propietario)
-  async eliminar(id: number, idUsuario: number): Promise<{ mensaje: string }> {
-    await this.obtenerPorId(id, idUsuario);
-
-    await this.prisma.tickets.delete({
-      where: { id_ticket: id },
-    });
-
-    return { mensaje: 'Ticket eliminado exitosamente' };
-  }
-
-  // Método privado para generar número de ticket único
-  private async generarNumeroTicket(): Promise<string> {
-    const fecha = new Date();
-    const año = fecha.getFullYear();
-    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-
-    // Obtener el último ticket del mes para generar secuencial
-    const ultimoTicket = await this.prisma.tickets.findFirst({
-      where: {
-        numero_ticket: {
-          startsWith: `TK${año}${mes}`,
-        },
-      },
-      orderBy: {
-        numero_ticket: 'desc',
-      },
-    });
-=======
   /**
    * Obtener tickets donde el usuario está en copia
    * @param idUsuario - ID del usuario
-   * @returns Promise<RespuestaTicketDto[]> - Tickets en copia
+   * @returns Promise<RespuestaTicketDto[]>
    */
   async obtenerTicketsEnCopia(idUsuario: number): Promise<RespuestaTicketDto[]> {
     try {
-      console.log(`📧 Obteniendo tickets en copia para usuario: ${idUsuario}`);
+      console.log(`📋 Obteniendo tickets en copia para usuario: ${idUsuario}`);
       
-      const tickets = await this.prisma.tickets.findMany({
-        where: {
-          usuarios_en_copia: {
-            some: {
-              id_usuario: idUsuario
-            }
-          }
-        },
-        include: {
-          solicitante: {
-            select: {
-              id_usuario: true,
-              primer_nombre: true,
-              primer_apellido: true,
-              correo: true
-            }
-          },
-          departamento: {
-            select: {
-              id_departamento: true,
-              nombre_departamento: true
-            }
-          },
-          prioridad: {
-            select: {
-              id_prioridad: true,
-              nombre_prioridad: true,
-              nivel: true
-            }
-          },
-          estado: {
-            select: {
-              id_estado: true,
-              nombre_estado: true
-            }
-          }
-        },
-        orderBy: {
-          fecha_creacion: 'desc'
-        }
-      });
-      
-      console.log(`✅ ${tickets.length} tickets en copia obtenidos`);
-      
-      return tickets.map(ticket => this.formatearRespuesta(ticket));
->>>>>>> 776b6d3d4b4aea9daffab5f570b29bdac448455d
+      // TODO: Implementar cuando tengamos la tabla usuarios_en_copia
+      // Por ahora retornamos array vacío
+      return [];
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error al obtener tickets en copia:', error);
       throw error;
     }
   }
 
   /**
-   * Obtener ticket por ID
+   * Obtener un ticket por ID con validación de acceso
    * @param id - ID del ticket
-   * @param idUsuario - ID del usuario (para verificar permisos)
-   * @returns Promise<RespuestaTicketDto> - Ticket encontrado
+   * @param idUsuario - ID del usuario que solicita (para validar acceso)
+   * @returns Promise<RespuestaTicketDto>
    */
   async obtenerPorId(id: number, idUsuario?: number): Promise<RespuestaTicketDto> {
     try {
@@ -385,14 +200,6 @@ export class TicketsService {
               correo: true
             }
           },
-          responsable: {
-            select: {
-              id_usuario: true,
-              primer_nombre: true,
-              primer_apellido: true,
-              correo: true
-            }
-          },
           departamento: {
             select: {
               id_departamento: true,
@@ -411,6 +218,14 @@ export class TicketsService {
               id_estado: true,
               nombre_estado: true
             }
+          },
+          responsable: {
+            select: {
+              id_usuario: true,
+              primer_nombre: true,
+              primer_apellido: true,
+              correo: true
+            }
           }
         }
       });
@@ -421,30 +236,29 @@ export class TicketsService {
 
       // Verificar si el usuario tiene acceso al ticket
       if (idUsuario && ticket.id_solicitante !== idUsuario && ticket.asignado_a !== idUsuario) {
-        // TODO: También verificar si es admin
-        throw new ForbiddenException('No tiene permisos para ver este ticket');
+        throw new ForbiddenException('No tiene permisos para acceder a este ticket');
       }
 
       console.log(`✅ Ticket ${id} encontrado correctamente`);
 
       return this.formatearRespuesta(ticket);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(`❌ Error al obtener ticket ${id}:`, error);
       throw error;
     }
   }
 
   /**
-   * Actualizar ticket
+   * Actualizar un ticket existente
    * @param id - ID del ticket
    * @param actualizarTicketDto - Datos a actualizar
    * @param idUsuario - ID del usuario que actualiza
-   * @returns Promise<RespuestaTicketDto> - Ticket actualizado
+   * @returns Promise<RespuestaTicketDto>
    */
   async actualizar(
-    id: number, 
-    actualizarTicketDto: ActualizarTicketDto, 
+    id: number,
+    actualizarTicketDto: ActualizarTicketDto,
     idUsuario?: number
   ): Promise<RespuestaTicketDto> {
     try {
@@ -460,10 +274,9 @@ export class TicketsService {
       }
 
       // Verificar permisos (solo el solicitante o responsable pueden actualizar)
-      if (idUsuario && 
-          ticketExistente.id_solicitante !== idUsuario && 
+      if (idUsuario &&
+          ticketExistente.id_solicitante !== idUsuario &&
           ticketExistente.asignado_a !== idUsuario) {
-        // TODO: También verificar si es admin
         throw new ForbiddenException('No tiene permisos para actualizar este ticket');
       }
 
@@ -472,7 +285,7 @@ export class TicketsService {
         where: { id_ticket: id },
         data: {
           ...actualizarTicketDto,
-          fecha_actualizacion: new Date()
+          fecha_actualizacion: new Date(),
         },
         include: {
           solicitante: {
@@ -486,20 +299,28 @@ export class TicketsService {
           departamento: {
             select: {
               id_departamento: true,
-              nombre_departamento: true
+              nombre_departamento: true,
             }
           },
           prioridad: {
             select: {
               id_prioridad: true,
               nombre_prioridad: true,
-              nivel: true
+              nivel: true,
             }
           },
           estado: {
             select: {
               id_estado: true,
-              nombre_estado: true
+              nombre_estado: true,
+            }
+          },
+          responsable: {
+            select: {
+              id_usuario: true,
+              primer_nombre: true,
+              primer_apellido: true,
+              correo: true
             }
           }
         }
@@ -509,21 +330,21 @@ export class TicketsService {
 
       return this.formatearRespuesta(ticketActualizado);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(`❌ Error al actualizar ticket ${id}:`, error);
       throw error;
     }
   }
 
   /**
-   * Eliminar ticket
+   * Eliminar un ticket (soft delete recomendado)
    * @param id - ID del ticket
    * @param idUsuario - ID del usuario que elimina
-   * @returns Promise<boolean> - Confirmación de eliminación
+   * @returns Promise<boolean>
    */
   async eliminar(id: number, idUsuario?: number): Promise<boolean> {
     try {
-      console.log(`🗑️  Eliminando ticket ${id} por usuario: ${idUsuario}`);
+      console.log(`🗑️ Eliminando ticket ${id} por usuario: ${idUsuario}`);
 
       // Verificar que el ticket existe
       const ticketExistente = await this.prisma.tickets.findUnique({
@@ -536,11 +357,10 @@ export class TicketsService {
 
       // Verificar permisos (solo el solicitante o admin pueden eliminar)
       if (idUsuario && ticketExistente.id_solicitante !== idUsuario) {
-        // TODO: También verificar si es admin
         throw new ForbiddenException('No tiene permisos para eliminar este ticket');
       }
 
-      // Eliminar el ticket (Prisma maneja las relaciones en cascada)
+      // Eliminar el ticket
       await this.prisma.tickets.delete({
         where: { id_ticket: id }
       });
@@ -549,32 +369,33 @@ export class TicketsService {
 
       return true;
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(`❌ Error al eliminar ticket ${id}:`, error);
       throw error;
     }
   }
 
-  // ============ MÉTODOS ESPECÍFICOS PARA RESPONSABLES ============
-
   /**
-   * Obtener tickets abiertos (estados: Nuevo, En Progreso, Escalado)
-   * @param idUsuarioResponsable - ID del responsable
-   * @returns Promise<RespuestaTicketDto[]> - Tickets abiertos
+   * Obtener tickets abiertos para un responsable
+   * @param idUsuarioResponsable - ID del usuario responsable
+   * @returns Promise<RespuestaTicketDto[]>
    */
   async obtenerTicketsAbiertos(idUsuarioResponsable: number): Promise<RespuestaTicketDto[]> {
     try {
       console.log(`📂 Obteniendo tickets abiertos para responsable: ${idUsuarioResponsable}`);
-
-      // Estados considerados "abiertos": 1=Nuevo, 2=En Progreso, 3=Escalado
+      
+      // Estados considerados como "abiertos": Nuevo, En Proceso, Pendiente
       const estadosAbiertos = [1, 2, 3];
 
       const tickets = await this.prisma.tickets.findMany({
         where: {
           id_estado: {
             in: estadosAbiertos
-          }
-          // TODO: Filtrar por departamento del responsable cuando esté implementado
+          },
+          OR: [
+            { asignado_a: null }, // Tickets sin asignar
+            { asignado_a: idUsuarioResponsable } // Tickets asignados al responsable
+          ]
         },
         include: {
           solicitante: {
@@ -585,23 +406,15 @@ export class TicketsService {
               correo: true
             }
           },
-          departamento: {
+          departamento: true,
+          prioridad: true,
+          estado: true,
+          responsable: {
             select: {
-              id_departamento: true,
-              nombre_departamento: true
-            }
-          },
-          prioridad: {
-            select: {
-              id_prioridad: true,
-              nombre_prioridad: true,
-              nivel: true
-            }
-          },
-          estado: {
-            select: {
-              id_estado: true,
-              nombre_estado: true
+              id_usuario: true,
+              primer_nombre: true,
+              primer_apellido: true,
+              correo: true
             }
           }
         },
@@ -615,29 +428,30 @@ export class TicketsService {
 
       return tickets.map(ticket => this.formatearRespuesta(ticket));
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error al obtener tickets abiertos:', error);
       throw error;
     }
   }
 
   /**
-   * Obtener tickets cerrados (estados: Resuelto, Cerrado)
-   * @param idUsuarioResponsable - ID del responsable
-   * @returns Promise<RespuestaTicketDto[]> - Tickets cerrados
+   * Obtener tickets cerrados para un responsable
+   * @param idUsuarioResponsable - ID del usuario responsable
+   * @returns Promise<RespuestaTicketDto[]>
    */
   async obtenerTicketsCerrados(idUsuarioResponsable: number): Promise<RespuestaTicketDto[]> {
     try {
       console.log(`📁 Obteniendo tickets cerrados para responsable: ${idUsuarioResponsable}`);
-
-      // Estados considerados "cerrados": 4=Resuelto, 5=Cerrado
+      
+      // Estados considerados como "cerrados": Resuelto, Cerrado
       const estadosCerrados = [4, 5];
 
       const tickets = await this.prisma.tickets.findMany({
         where: {
           id_estado: {
             in: estadosCerrados
-          }
+          },
+          asignado_a: idUsuarioResponsable
         },
         include: {
           solicitante: {
@@ -648,80 +462,66 @@ export class TicketsService {
               correo: true
             }
           },
-          departamento: {
+          departamento: true,
+          prioridad: true,
+          estado: true,
+          responsable: {
             select: {
-              id_departamento: true,
-              nombre_departamento: true
-            }
-          },
-          prioridad: {
-            select: {
-              id_prioridad: true,
-              nombre_prioridad: true,
-              nivel: true
-            }
-          },
-          estado: {
-            select: {
-              id_estado: true,
-              nombre_estado: true
+              id_usuario: true,
+              primer_nombre: true,
+              primer_apellido: true,
+              correo: true
             }
           }
         },
-        orderBy: {
-          fecha_resolucion: 'desc'
-        }
+        orderBy: [
+          { fecha_actualizacion: 'desc' } // Más recientes primero
+        ]
       });
 
       console.log(`✅ ${tickets.length} tickets cerrados encontrados`);
 
       return tickets.map(ticket => this.formatearRespuesta(ticket));
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error al obtener tickets cerrados:', error);
       throw error;
     }
   }
 
   /**
-   * Obtener tickets pendientes (vencidos o próximos a vencer)
-   * @param idUsuarioResponsable - ID del responsable
-   * @returns Promise<RespuestaTicketDto[]> - Tickets pendientes
+   * Obtener tickets pendientes que requieren atención
+   * @param idUsuarioResponsable - ID del usuario responsable
+   * @returns Promise<RespuestaTicketDto[]>
    */
   async obtenerTicketsPendientes(idUsuarioResponsable: number): Promise<RespuestaTicketDto[]> {
     try {
       console.log(`⏰ Obteniendo tickets pendientes para responsable: ${idUsuarioResponsable}`);
-
+      
       const ahora = new Date();
       const en24Horas = new Date();
       en24Horas.setHours(en24Horas.getHours() + 24);
 
       const tickets = await this.prisma.tickets.findMany({
         where: {
-          AND: [
+          OR: [
+            // Tickets vencidos
             {
-              id_estado: {
-                in: [1, 2, 3] // Solo tickets abiertos
-              }
+              fecha_vencimiento: {
+                lt: ahora
+              },
+              id_estado: { in: [1, 2, 3] } // Estados abiertos
             },
+            // Tickets que vencen en las próximas 24 horas
             {
-              OR: [
-                // Tickets ya vencidos
-                {
-                  fecha_vencimiento: {
-                    lt: ahora
-                  }
-                },
-                // Tickets que vencen en las próximas 24 horas
-                {
-                  fecha_vencimiento: {
-                    gte: ahora,
-                    lte: en24Horas
-                  }
-                }
-              ]
+              fecha_vencimiento: {
+                gte: ahora,
+                lte: en24Horas
+              },
+              id_estado: { in: [1, 2, 3] } // Estados abiertos
             }
-          ]
+          ],
+          asignado_a: idUsuarioResponsable
         },
         include: {
           solicitante: {
@@ -732,52 +532,45 @@ export class TicketsService {
               correo: true
             }
           },
-          departamento: {
+          departamento: true,
+          prioridad: true,
+          estado: true,
+          responsable: {
             select: {
-              id_departamento: true,
-              nombre_departamento: true
-            }
-          },
-          prioridad: {
-            select: {
-              id_prioridad: true,
-              nombre_prioridad: true,
-              nivel: true
-            }
-          },
-          estado: {
-            select: {
-              id_estado: true,
-              nombre_estado: true
+              id_usuario: true,
+              primer_nombre: true,
+              primer_apellido: true,
+              correo: true
             }
           }
         },
-        orderBy: {
-          fecha_vencimiento: 'asc' // Más urgentes primero
-        }
+        orderBy: [
+          { fecha_vencimiento: 'asc' }, // Más urgentes primero
+          { id_prioridad: 'asc' } // Prioridad alta primero
+        ]
       });
 
       console.log(`✅ ${tickets.length} tickets pendientes encontrados`);
 
       return tickets.map(ticket => this.formatearRespuesta(ticket));
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error al obtener tickets pendientes:', error);
       throw error;
     }
   }
 
   /**
-   * Tomar un ticket (asignarlo al responsable actual)
+   * Tomar un ticket (asignarse como responsable)
    * @param id - ID del ticket
-   * @param idUsuarioResponsable - ID del responsable que toma el ticket
-   * @returns Promise<RespuestaTicketDto> - Ticket asignado
+   * @param idUsuarioResponsable - ID del usuario que toma el ticket
+   * @returns Promise<RespuestaTicketDto>
    */
   async tomarTicket(id: number, idUsuarioResponsable: number): Promise<RespuestaTicketDto> {
     try {
       console.log(`🤝 Responsable ${idUsuarioResponsable} tomando ticket ${id}`);
 
-      // Verificar que el ticket existe y está disponible para tomar
+      // Verificar que el ticket existe
       const ticket = await this.prisma.tickets.findUnique({
         where: { id_ticket: id }
       });
@@ -791,13 +584,13 @@ export class TicketsService {
         throw new BadRequestException('El ticket ya está asignado a otro responsable');
       }
 
-      // Asignar el ticket al responsable
+      // Asignar el ticket y cambiar estado a "En Proceso"
       const ticketAsignado = await this.prisma.tickets.update({
         where: { id_ticket: id },
         data: {
           asignado_a: idUsuarioResponsable,
-          id_estado: 2, // Cambiar estado a "En Progreso"
-          fecha_actualizacion: new Date()
+          id_estado: 2, // En Proceso
+          fecha_actualizacion: new Date(),
         },
         include: {
           solicitante: {
@@ -808,31 +601,15 @@ export class TicketsService {
               correo: true
             }
           },
+          departamento: true,
+          prioridad: true,
+          estado: true,
           responsable: {
             select: {
               id_usuario: true,
               primer_nombre: true,
               primer_apellido: true,
               correo: true
-            }
-          },
-          departamento: {
-            select: {
-              id_departamento: true,
-              nombre_departamento: true
-            }
-          },
-          prioridad: {
-            select: {
-              id_prioridad: true,
-              nombre_prioridad: true,
-              nivel: true
-            }
-          },
-          estado: {
-            select: {
-              id_estado: true,
-              nombre_estado: true
             }
           }
         }
@@ -842,23 +619,23 @@ export class TicketsService {
 
       return this.formatearRespuesta(ticketAsignado);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(`❌ Error al tomar ticket ${id}:`, error);
       throw error;
     }
   }
 
   /**
-   * Derivar ticket a otro departamento
+   * Derivar un ticket a otro departamento
    * @param id - ID del ticket
    * @param idDepartamentoDestino - ID del departamento destino
    * @param motivo - Motivo de la derivación
-   * @param idUsuarioResponsable - ID del responsable que deriva
-   * @returns Promise<RespuestaTicketDto> - Ticket derivado
+   * @param idUsuarioResponsable - ID del usuario que deriva
+   * @returns Promise<RespuestaTicketDto>
    */
   async derivarTicket(
-    id: number, 
-    idDepartamentoDestino: number, 
+    id: number,
+    idDepartamentoDestino: number,
     motivo: string,
     idUsuarioResponsable: number
   ): Promise<RespuestaTicketDto> {
@@ -874,11 +651,10 @@ export class TicketsService {
         throw new NotFoundException(`Ticket con ID ${id} no encontrado`);
       }
 
-      // Verificar que el departamento destino existe
+      // Verificar que el departamento destino existe y está activo
       const departamentoDestino = await this.prisma.departamentos.findUnique({
-        where: { 
-          id_departamento: idDepartamentoDestino,
-          activo: true
+        where: {
+          id_departamento: idDepartamentoDestino
         }
       });
 
@@ -891,77 +667,54 @@ export class TicketsService {
         throw new BadRequestException('No se puede derivar al mismo departamento');
       }
 
-      // Iniciar transacción para actualizar ticket y crear registro de derivación
+      // Usar transacción para derivar el ticket y registrar el historial
       const resultado = await this.prisma.$transaction(async (prisma) => {
-        // Actualizar el ticket con la derivación
-        const ticketDerivado = await prisma.tickets.update({
+        // Actualizar el ticket
+        const ticketActualizado = await prisma.tickets.update({
           where: { id_ticket: id },
           data: {
             id_departamento: idDepartamentoDestino,
-            asignado_a: null, // Limpiar asignación anterior
-            id_estado: 1, // Volver a estado "Nuevo" en el nuevo departamento
-            fecha_actualizacion: new Date()
+            asignado_a: null, // Quitar asignación actual
+            id_estado: 1, // Volver a estado "Nuevo"
+            fecha_actualizacion: new Date(),
           },
           include: {
-            solicitante: {
-              select: {
-                id_usuario: true,
-                primer_nombre: true,
-                primer_apellido: true,
-                correo: true
-              }
-            },
-            departamento: {
-              select: {
-                id_departamento: true,
-                nombre_departamento: true
-              }
-            },
-            prioridad: {
-              select: {
-                id_prioridad: true,
-                nombre_prioridad: true,
-                nivel: true
-              }
-            },
-            estado: {
-              select: {
-                id_estado: true,
-                nombre_estado: true
-              }
-            }
+            solicitante: true,
+            departamento: true,
+            prioridad: true,
+            estado: true,
+            responsable: true
           }
         });
 
-        // Registrar la derivación en el historial
-        await prisma.derivaciones.create({
-          data: {
-            id_ticket: id,
-            id_departamento_origen: ticket.id_departamento,
-            id_departamento_destino: idDepartamentoDestino,
-            derivado_por: idUsuarioResponsable,
-            motivo: motivo
-          }
-        });
+        // TODO: Registrar en historial de derivaciones cuando tengamos la tabla
+        // await prisma.historial_derivaciones.create({
+        //   data: {
+        //     id_ticket: id,
+        //     id_departamento_origen: ticket.id_departamento,
+        //     id_departamento_destino: idDepartamentoDestino,
+        //     derivado_por: idUsuarioResponsable,
+        //     motivo: motivo
+        //   }
+        // });
 
-        return ticketDerivado;
+        return ticketActualizado;
       });
 
       console.log(`✅ Ticket ${id} derivado correctamente al departamento ${idDepartamentoDestino}`);
 
       return this.formatearRespuesta(resultado);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(`❌ Error al derivar ticket ${id}:`, error);
       throw error;
     }
   }
 
-  // ============ MÉTODOS AUXILIARES PRIVADOS ============
-
   /**
-   * Generar número de ticket único
-   * @returns Promise<string> - Número de ticket generado
+   * Generar número único para ticket
+   * Formato: TK + YYYYMM + número secuencial de 3 dígitos
+   * @returns Promise<string>
    */
   private async generarNumeroTicket(): Promise<string> {
     try {
@@ -972,7 +725,7 @@ export class TicketsService {
       // Buscar el último ticket del mes actual
       const inicioMes = new Date(ano, fechaActual.getMonth(), 1);
       const finMes = new Date(ano, fechaActual.getMonth() + 1, 0, 23, 59, 59);
-
+      
       const ultimoTicket = await this.prisma.tickets.findFirst({
         where: {
           fecha_creacion: {
@@ -980,9 +733,7 @@ export class TicketsService {
             lte: finMes
           }
         },
-        orderBy: {
-          numero_ticket: 'desc'
-        }
+        orderBy: { fecha_creacion: 'desc' }
       });
 
       let siguienteNumero = 1;
@@ -993,53 +744,51 @@ export class TicketsService {
         siguienteNumero = parseInt(numeroActual || '0') + 1;
       }
 
-      // Formatear número con ceros a la izquierda (3 dígitos)
+      // Formatear número con 3 dígitos
       const numeroFormateado = String(siguienteNumero).padStart(3, '0');
       const numeroTicket = `TK${ano}${mes}${numeroFormateado}`;
-
+      
       console.log(`🎫 Número de ticket generado: ${numeroTicket}`);
-
+      
       return numeroTicket;
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error al generar número de ticket:', error);
-      // Fallback con timestamp si falla la generación secuencial
-      const timestamp = Date.now().toString().slice(-6);
-      return `TK${new Date().getFullYear()}${timestamp}`;
+      throw error;
     }
   }
 
   /**
-   * Calcular fecha de vencimiento basada en la prioridad
+   * Calcular fecha de vencimiento según prioridad
    * @param nivelPrioridad - Nivel de prioridad (1=Alta, 2=Media, 3=Baja)
-   * @returns Date - Fecha de vencimiento calculada
+   * @returns Date - Fecha de vencimiento
    */
   private calcularFechaVencimiento(nivelPrioridad: number): Date {
     const fechaVencimiento = new Date();
     
     switch (nivelPrioridad) {
-      case 1: // Prioridad Alta
-        fechaVencimiento.setHours(fechaVencimiento.getHours() + 4); // 4 horas
+      case 1: // Alta - 24 horas
+        fechaVencimiento.setHours(fechaVencimiento.getHours() + 24);
         break;
-      case 2: // Prioridad Media
-        fechaVencimiento.setHours(fechaVencimiento.getHours() + 24); // 1 día
+      case 2: // Media - 72 horas (3 días)
+        fechaVencimiento.setHours(fechaVencimiento.getHours() + 72);
         break;
-      case 3: // Prioridad Baja
-        fechaVencimiento.setDate(fechaVencimiento.getDate() + 3); // 3 días
+      case 3: // Baja - 168 horas (7 días)
+        fechaVencimiento.setHours(fechaVencimiento.getHours() + 168);
         break;
       default:
-        fechaVencimiento.setHours(fechaVencimiento.getHours() + 24); // Por defecto 1 día
+        fechaVencimiento.setHours(fechaVencimiento.getHours() + 72);
     }
-
-    console.log(`⏱️  Fecha vencimiento calculada para prioridad ${nivelPrioridad}: ${fechaVencimiento.toISOString()}`);
-
+    
+    console.log(`⏱️ Fecha vencimiento calculada para prioridad ${nivelPrioridad}: ${fechaVencimiento.toISOString()}`);
+    
     return fechaVencimiento;
   }
 
   /**
    * Formatear respuesta del ticket para el frontend
-   * @param ticket - Ticket desde la base de datos (con o sin relaciones)
-   * @returns RespuestaTicketDto - Ticket formateado
+   * @param ticket - Ticket de la base de datos
+   * @returns RespuestaTicketDto
    */
   private formatearRespuesta(ticket: any): RespuestaTicketDto {
     return {
@@ -1048,136 +797,37 @@ export class TicketsService {
       asunto: ticket.asunto,
       descripcion: ticket.descripcion,
       id_solicitante: ticket.id_solicitante,
-      asignado_a: ticket.asignado_a,
+      nombre_solicitante: ticket.solicitante ? 
+        `${ticket.solicitante.primer_nombre} ${ticket.solicitante.primer_apellido}` : 
+        'No disponible',
       id_departamento: ticket.id_departamento,
       id_prioridad: ticket.id_prioridad,
       id_estado: ticket.id_estado,
-      fecha_vencimiento: ticket.fecha_vencimiento,
-      fecha_resolucion: ticket.fecha_resolucion,
-      fecha_cierre: ticket.fecha_cierre,
+      asignado_a: ticket.asignado_a,
+      nombre_responsable: ticket.responsable ? 
+        `${ticket.responsable.primer_nombre} ${ticket.responsable.primer_apellido}` : 
+        null,
       fecha_creacion: ticket.fecha_creacion,
       fecha_actualizacion: ticket.fecha_actualizacion,
+      fecha_vencimiento: ticket.fecha_vencimiento,
+
       
-      // Incluir datos relacionados si están disponibles
-      solicitante: ticket.solicitante ? {
-        id_usuario: ticket.solicitante.id_usuario,
-        primer_nombre: ticket.solicitante.primer_nombre,
-        primer_apellido: ticket.solicitante.primer_apellido,
-        correo: ticket.solicitante.correo
-      } : undefined,
-      
-      responsable: ticket.responsable ? {
-        id_usuario: ticket.responsable.id_usuario,
-        primer_nombre: ticket.responsable.primer_nombre,
-        primer_apellido: ticket.responsable.primer_apellido,
-        correo: ticket.responsable.correo
-      } : undefined,
-      
+      // Datos relacionados (si están incluidos)
       departamento: ticket.departamento ? {
-        id_departamento: ticket.departamento.id_departamento,
-        nombre_departamento: ticket.departamento.nombre_departamento
+        id: ticket.departamento.id_departamento,
+        nombre: ticket.departamento.nombre_departamento
       } : undefined,
       
       prioridad: ticket.prioridad ? {
-        id_prioridad: ticket.prioridad.id_prioridad,
-        nombre_prioridad: ticket.prioridad.nombre_prioridad,
+        id: ticket.prioridad.id_prioridad,
+        nombre: ticket.prioridad.nombre_prioridad,
         nivel: ticket.prioridad.nivel
       } : undefined,
       
       estado: ticket.estado ? {
-        id_estado: ticket.estado.id_estado,
-        nombre_estado: ticket.estado.nombre_estado
+        id: ticket.estado.id_estado,
+        nombre: ticket.estado.nombre_estado
       } : undefined
     };
   }
-<<<<<<< HEAD
 }
-=======
-
-  /**
-   * Asignar responsable automáticamente basado en carga de trabajo
-   * @param idDepartamento - ID del departamento
-   * @returns Promise<number | null> - ID del responsable asignado
-   */
-  private async asignarResponsableAutomatico(idDepartamento: number): Promise<number | null> {
-    try {
-      // TODO: Implementar lógica de asignación automática
-      // 1. Obtener responsables del departamento
-      // 2. Calcular carga de trabajo de cada uno
-      // 3. Asignar al que tenga menor carga
-      
-      console.log(`🔄 Asignación automática pendiente para departamento ${idDepartamento}`);
-      return null;
-
-    } catch (error) {
-      console.error('❌ Error en asignación automática:', error);
-      return null;
-    }
-  }
-  /**
- * Obtener datos maestros para formulario
- * @returns Promise con departamentos y prioridades
- */
-async obtenerDatosMaestrosFormulario(): Promise<{
-  departamentos: any[];
-  prioridades: any[];
-}> {
-  try {
-    console.log('📚 Obteniendo datos maestros para formulario...');
-
-    const [departamentos, prioridades] = await Promise.all([
-      this.prisma.departamentos.findMany({
-        orderBy: { nombre_departamento: 'asc' }
-      }),
-      this.prisma.prioridades.findMany({
-        orderBy: { nivel: 'asc' }
-      })
-    ]);
-
-    return {
-      departamentos: departamentos.map(d => ({
-        id_departamento: d.id_departamento,
-        nombre_departamento: d.nombre_departamento
-      })),
-      prioridades: prioridades.map(p => ({
-        id_prioridad: p.id_prioridad,
-        nombre_prioridad: p.nombre_prioridad,
-        nivel: p.nivel
-      }))
-    };
-
-  } catch (error) {
-    console.error('❌ Error al obtener datos maestros:', error);
-    throw error;
-  }
-}
-
-/**
- * Validar datos antes de crear ticket
- * @param idDepartamento - ID del departamento
- * @param idPrioridad - ID de la prioridad
- * @returns Promise<boolean> - True si los datos son válidos
- */
-async validarDatosTicket(idDepartamento: number, idPrioridad: number): Promise<boolean> {
-  try {
-    const [departamento, prioridad] = await Promise.all([
-      this.prisma.departamentos.findUnique({
-        where: { id_departamento: idDepartamento }
-      }),
-      this.prisma.prioridades.findUnique({
-        where: { id_prioridad: idPrioridad }
-      })
-    ]);
-
-    const esValido = !!departamento && !!prioridad;
-    console.log(`🔍 Validación datos: dept=${!!departamento}, prioridad=${!!prioridad}`);
-    
-    return esValido;
-
-  } catch (error) {
-    console.error('❌ Error en validación:', error);
-    return false;
-  }
-}
-}
->>>>>>> 776b6d3d4b4aea9daffab5f570b29bdac448455d

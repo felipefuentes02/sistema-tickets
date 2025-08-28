@@ -26,7 +26,6 @@ model departamentos {
 model estados_ticket {
   id_estado      Int     @id @default(autoincrement())
   nombre_estado  String  @unique @db.VarChar(25)
-  // Solo campos que existen en la BD actual
   
   // Relaciones
   tickets        tickets[]
@@ -39,7 +38,6 @@ model prioridades {
   id_prioridad     Int    @id @default(autoincrement())
   nombre_prioridad String @unique @db.VarChar(25)
   nivel            Int    @unique
-  // Solo campos que existen en la BD actual
   
   // Relaciones
   tickets          tickets[]

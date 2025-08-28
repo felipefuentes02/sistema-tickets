@@ -1,21 +1,71 @@
 {
   "compilerOptions": {
+    // ===== CONFIGURACIÓN DEL MÓDULO =====
     "module": "commonjs",
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "moduleResolution": "node",
+    
+    // ===== CONFIGURACIÓN DE DECORADORES (NESTJS) =====
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    
+    // ===== CONFIGURACIÓN DE ARCHIVOS =====
     "declaration": true,
     "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "target": "ES2023",
     "sourceMap": true,
     "outDir": "./dist",
+    "rootDir": "./src",
     "baseUrl": "./",
+    
+    // ===== PATHS PARA IMPORTS ABSOLUTOS =====
+    "paths": {
+      "@/*": ["src/*"],
+      "@config/*": ["src/config/*"],
+      "@modules/*": ["src/modules/*"],
+      "@shared/*": ["src/shared/*"]
+    },
+    
+    // ===== OPTIMIZACIONES DE COMPILACIÓN =====
     "incremental": true,
     "skipLibCheck": true,
-    "strictNullChecks": true,
+    "skipDefaultLibCheck": true,
+    
+    // ===== CONFIGURACIÓN DE IMPORTACIONES =====
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
-  }
+    "resolveJsonModule": true,
+    
+    // ===== CONFIGURACIÓN DE TIPOS ESTRICTA =====
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    
+    // ===== CONFIGURACIÓN DE TIPOS (SIN TIPOS IMPLÍCITOS PROBLEMÁTICOS) =====
+    // Removemos la propiedad "types" para que TypeScript no fuerce tipos específicos
+    // TypeScript usará automáticamente todos los @types instalados en node_modules
+    "typeRoots": ["./node_modules/@types"]
+  },
+  
+  // ===== ARCHIVOS A INCLUIR =====
+  "include": [
+    "src/**/*",
+    "test/**/*"
+  ],
+  
+  // ===== ARCHIVOS A EXCLUIR =====
+  "exclude": [
+    "node_modules",
+    "dist",
+    "coverage",
+    "*.js",
+    "**/*.spec.ts"
+  ]
 }

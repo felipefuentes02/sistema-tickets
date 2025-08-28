@@ -1,25 +1,31 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
-/**
- * Servicio de Prisma
- * Maneja la conexión y operaciones con la base de datos PostgreSQL
- */
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit {
+export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+  
   /**
-   * Inicializa la conexión a la base de datos al cargar el módulo
+   * Inicialización del módulo - establece conexión con la base de datos
    */
   async onModuleInit() {
-    await this.$connect();
-    console.log('✅ Conectado a la base de datos PostgreSQL');
+    try {
+      await this.$connect();
+      console.log('✅ Conectado a la base de datos PostgreSQL');
+    } catch (error) {
+      console.error('❌ Error al conectar con PostgreSQL:', error);
+      throw error;
+    }
   }
 
   /**
-   * Cierra la conexión a la base de datos
+   * Destrucción del módulo - cierra conexión con la base de datos
    */
   async onModuleDestroy() {
-    await this.$disconnect();
-    console.log('🔌 Desconectado de la base de datos PostgreSQL');
+    try {
+      await this.$disconnect();
+      console.log('🔌 Desconectado de la base de datos PostgreSQL');
+    } catch (error) {
+      console.error('❌ Error al desconectar de PostgreSQL:', error);
+    }
   }
 }

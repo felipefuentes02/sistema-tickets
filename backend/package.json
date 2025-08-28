@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "Backend para sistema de gestión de tickets - Proyecto Título IPLACEX",
+  "description": "Backend para sistema de gestión de tickets",
   "author": "Felipe Fuentes Muñoz",
   "private": true,
   "license": "MIT",
@@ -72,7 +72,7 @@
     "ts-jest": "^29.1.0",
     "ts-loader": "^9.4.3",
     "ts-node": "^10.9.1",
-    "tsconfig-paths": "^4.2.3",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.1.3"
   },
   "jest": {
