@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 
@@ -31,666 +27,921 @@ interface ActualizarUsuarioDto {
   rol?: string;
 }
 
-interface FiltrosUsuario {
-  nombre?: string;
-  departamento?: number;
-  rol?: string;
-  ordenarPor?: string;
-  direccion?: string;
-  pagina?: number;
-  limite?: number;
-}
-
-interface FiltrosDepartamento {
-  activo?: boolean;
-  nombre?: string;
-}
-
-// ✅ NUEVO: Interface para métricas
-interface TendenciaMensual {
-  mes: string;
-  usuarios: number;
+interface CrearDepartamentoDto {
+  nombre: string;
 }
 
 @Injectable()
 export class AdminService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  // ============ MÉTODOS DE USUARIOS ============
-
-  async obtenerUsuarios(filtros: FiltrosUsuario = {}) {
+  async obtenerUsuarios(filtros: any = {}) {
     try {
-      console.log('👥 Obteniendo usuarios con filtros:', filtros);
-
-      const whereClause: any = {};
+      const condicionesBusqueda: any = {};
 
       if (filtros.nombre) {
-        whereClause.OR = [
+        condicionesBusqueda.OR = [
           { primer_nombre: { contains: filtros.nombre, mode: 'insensitive' } },
-          {
-            primer_apellido: { contains: filtros.nombre, mode: 'insensitive' },
-          },
-          { correo: { contains: filtros.nombre, mode: 'insensitive' } },
+          { segundo_nombre: { contains: filtros.nombre, mode: 'insensitive' } },
+          { primer_apellido: { contains: filtros.nombre, mode: 'insensitive' } },
+          { segundo_apellido: { contains: filtros.nombre, mode: 'insensitive' } },
         ];
       }
 
       if (filtros.departamento) {
-        whereClause.id_departamento = filtros.departamento;
+        condicionesBusqueda.id_departamento = parseInt(filtros.departamento);
       }
 
-      if (filtros.rol) {
-        const idRol = this.convertirRolStringAId(filtros.rol);
-        if (idRol) {
-          whereClause.id_rol = idRol;
-        }
+      if (filtros.rol && filtros.rol !== 'todos') {
+        condicionesBusqueda.id_rol = parseInt(filtros.rol);
       }
-
-      const orderBy: any = {};
-      if (filtros.ordenarPor) {
-        const campo = this.mapearCampoOrdenamiento(filtros.ordenarPor);
-        orderBy[campo] = filtros.direccion === 'desc' ? 'desc' : 'asc';
-      } else {
-        orderBy.fecha_creacion = 'desc';
-      }
-
-      const skip =
-        filtros.pagina && filtros.limite
-          ? (filtros.pagina - 1) * filtros.limite
-          : undefined;
-      const take = filtros.limite || undefined;
 
       const usuarios = await this.prisma.usuarios.findMany({
-        where: whereClause,
-        orderBy: orderBy,
-        skip: skip,
-        take: take,
+        where: condicionesBusqueda,
+        include: {
+          departamento: {
+            select: {
+              id_departamento: true,
+              nombre_departamento: true,
+            },
+          },
+          rol: {
+            select: {
+              id_rol: true,
+              nombre_rol: true,
+            },
+          },
+        },
+        orderBy: [
+          { primer_apellido: 'asc' },
+          { primer_nombre: 'asc' },
+        ],
       });
 
-      console.log(`✅ Encontrados ${usuarios.length} usuarios`);
+      return usuarios.map(usuario => ({
+        id: usuario.id_usuario,
+        primer_nombre: usuario.primer_nombre,
+        segundo_nombre: usuario.segundo_nombre,
+        primer_apellido: usuario.primer_apellido,
+        segundo_apellido: usuario.segundo_apellido,
+        nombre_completo: `${usuario.primer_nombre} ${usuario.segundo_nombre || ''} ${usuario.primer_apellido} ${usuario.segundo_apellido}`.trim(),
+        correo: usuario.correo,
+        rut: usuario.rut,
+        rol: usuario.rol?.nombre_rol || 'Sin rol',
+        id_rol: usuario.id_rol,
+        id_departamento: usuario.id_departamento,
+        fecha_creacion: usuario.fecha_creacion,
+        ultimo_acceso: usuario.ultimo_acceso,
+        departamento: usuario.departamento,
+      }));
 
-      const usuariosTransformados = await Promise.all(
-        usuarios.map((usuario) => this.transformarUsuarioParaFrontend(usuario)),
-      );
-
-      return usuariosTransformados;
     } catch (error) {
-      console.error('❌ Error al obtener usuarios:', error);
-      throw new Error(`Error al obtener usuarios: ${error.message}`);
+      throw new HttpException('Error al obtener lista de usuarios', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   async obtenerUsuarioPorId(id: number) {
     try {
-      console.log(`🔍 Obteniendo usuario ${id}`);
-
       const usuario = await this.prisma.usuarios.findUnique({
         where: { id_usuario: id },
+        include: {
+          departamento: {
+            select: {
+              id_departamento: true,
+              nombre_departamento: true,
+            },
+          },
+          rol: {
+            select: {
+              id_rol: true,
+              nombre_rol: true,
+              permisos: true,
+            },
+          },
+        },
       });
 
-      if (!usuario) {
-        throw new NotFoundException('Usuario no encontrado');
-      }
+      if (!usuario) return null;
 
-      return this.transformarUsuarioParaFrontend(usuario);
+      return {
+        id: usuario.id_usuario,
+        primer_nombre: usuario.primer_nombre,
+        segundo_nombre: usuario.segundo_nombre,
+        primer_apellido: usuario.primer_apellido,
+        segundo_apellido: usuario.segundo_apellido,
+        nombre_completo: `${usuario.primer_nombre} ${usuario.segundo_nombre || ''} ${usuario.primer_apellido} ${usuario.segundo_apellido}`.trim(),
+        correo: usuario.correo,
+        rut: usuario.rut,
+        rol: usuario.rol?.nombre_rol || 'Sin rol',
+        id_rol: usuario.id_rol,
+        id_departamento: usuario.id_departamento,
+        fecha_creacion: usuario.fecha_creacion,
+        ultimo_acceso: usuario.ultimo_acceso,
+        departamento: usuario.departamento,
+      };
+
     } catch (error) {
-      console.error(`❌ Error al obtener usuario ${id}:`, error);
-      throw error;
+      throw new HttpException('Error al obtener usuario', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  async crearUsuario(crearUsuarioDto: CrearUsuarioDto) {
+  async crearUsuario(datosUsuario: CrearUsuarioDto) {
     try {
-      console.log('➕ Creando usuario:', crearUsuarioDto.correo);
+      const departamento = await this.prisma.departamentos.findUnique({
+        where: { id_departamento: datosUsuario.id_departamento },
+      });
 
-      const emailExiste = await this.validarEmailDisponible(
-        crearUsuarioDto.correo,
-      );
-      if (!emailExiste) {
-        throw new ConflictException('El email ya está en uso');
-      }
-
-      if (!crearUsuarioDto.rut) {
-        throw new Error('El RUT es obligatorio');
-      }
-
-      const rutExiste = await this.validarRutDisponible(crearUsuarioDto.rut);
-      if (!rutExiste) {
-        throw new ConflictException('El RUT ya está en uso');
-      }
-
-      const idRol = this.convertirRolStringAId(crearUsuarioDto.rol);
-      if (!idRol) {
-        throw new Error('Rol inválido');
-      }
-
-      const departamentoValido = await this.validarCodigoDepartamento(
-        crearUsuarioDto.id_departamento,
-      );
-      if (!departamentoValido) {
-        throw new Error(
-          'Código de departamento inválido. Debe ser: 1=Administración, 2=Comercial, 3=Informática, 4=Operaciones',
+      if (!departamento) {
+        throw new HttpException(
+          `Departamento con ID ${datosUsuario.id_departamento} no existe`,
+          HttpStatus.BAD_REQUEST,
         );
       }
 
-      const hashContrasena = await bcrypt.hash(crearUsuarioDto.contrasena, 12);
-
-      // ✅ CORREGIDO: Crear usuario sin el campo rut (temporal)
-      const usuarioData: any = {
-        primer_nombre: crearUsuarioDto.primer_nombre,
-        segundo_nombre: crearUsuarioDto.segundo_nombre || null,
-        primer_apellido: crearUsuarioDto.primer_apellido,
-        segundo_apellido: crearUsuarioDto.segundo_apellido,
-        correo: crearUsuarioDto.correo,
-        hash_contrasena: hashContrasena,
-        id_rol: idRol,
-        id_departamento: crearUsuarioDto.id_departamento,
-      };
-
-      // ✅ Solo agregar RUT si el tipo lo permite
-      if (crearUsuarioDto.rut) {
-        usuarioData.rut = crearUsuarioDto.rut;
-      }
-
-      const usuario = await this.prisma.usuarios.create({
-        data: usuarioData,
+      const usuarioExistente = await this.prisma.usuarios.findUnique({
+        where: { correo: datosUsuario.correo },
       });
 
-      console.log(`✅ Usuario creado con ID: ${usuario.id_usuario}`);
-      return this.transformarUsuarioParaFrontend(usuario);
+      if (usuarioExistente) {
+        throw new HttpException('El correo electrónico ya está registrado', HttpStatus.CONFLICT);
+      }
+
+      const rutExistente = await this.prisma.usuarios.findUnique({
+        where: { rut: datosUsuario.rut },
+      });
+
+      if (rutExistente) {
+        throw new HttpException('El RUT ya está registrado', HttpStatus.CONFLICT);
+      }
+
+      const rolEncontrado = await this.prisma.roles.findFirst({
+        where: { 
+          nombre_rol: {
+            equals: datosUsuario.rol,
+            mode: 'insensitive'
+          }
+        },
+      });
+
+      if (!rolEncontrado) {
+        throw new HttpException(`Rol '${datosUsuario.rol}' no existe en el sistema`, HttpStatus.BAD_REQUEST);
+      }
+
+      const contrasenaEncriptada = await bcrypt.hash(datosUsuario.contrasena, 12);
+
+      const nuevoUsuario = await this.prisma.usuarios.create({
+        data: {
+          primer_nombre: datosUsuario.primer_nombre,
+          segundo_nombre: datosUsuario.segundo_nombre,
+          primer_apellido: datosUsuario.primer_apellido,
+          segundo_apellido: datosUsuario.segundo_apellido,
+          correo: datosUsuario.correo,
+          rut: datosUsuario.rut,
+          hash_contrasena: contrasenaEncriptada,
+          id_rol: rolEncontrado.id_rol,
+          id_departamento: datosUsuario.id_departamento,
+          fecha_creacion: new Date(),
+        },
+        include: {
+          departamento: {
+            select: {
+              id_departamento: true,
+              nombre_departamento: true,
+            },
+          },
+          rol: {
+            select: {
+              id_rol: true,
+              nombre_rol: true,
+            },
+          },
+        },
+      });
+
+      const { hash_contrasena, ...usuarioSinContrasena } = nuevoUsuario;
+      return {
+        ...usuarioSinContrasena,
+        id: nuevoUsuario.id_usuario,
+      };
+
     } catch (error) {
-      console.error('❌ Error al crear usuario:', error);
-      throw error;
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException('Error interno al crear usuario', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  async actualizarUsuario(
-    id: number,
-    actualizarUsuarioDto: ActualizarUsuarioDto,
-  ) {
+  async actualizarUsuario(id: number, datosActualizacion: ActualizarUsuarioDto) {
     try {
-      console.log(`📝 Actualizando usuario ${id}`);
-
       const usuarioExistente = await this.prisma.usuarios.findUnique({
         where: { id_usuario: id },
       });
 
       if (!usuarioExistente) {
-        throw new NotFoundException('Usuario no encontrado');
+        throw new HttpException(`Usuario con ID ${id} no encontrado`, HttpStatus.NOT_FOUND);
       }
 
-      const datosActualizacion: any = {};
+      const datosActualizacionProcesados: any = { ...datosActualizacion };
 
-      if (actualizarUsuarioDto.primer_nombre) {
-        datosActualizacion.primer_nombre = actualizarUsuarioDto.primer_nombre;
-      }
-      if (actualizarUsuarioDto.segundo_nombre !== undefined) {
-        datosActualizacion.segundo_nombre =
-          actualizarUsuarioDto.segundo_nombre || null;
-      }
-      if (actualizarUsuarioDto.primer_apellido) {
-        datosActualizacion.primer_apellido =
-          actualizarUsuarioDto.primer_apellido;
-      }
-      if (actualizarUsuarioDto.segundo_apellido) {
-        datosActualizacion.segundo_apellido =
-          actualizarUsuarioDto.segundo_apellido;
+      if (datosActualizacion.contrasena) {
+        datosActualizacionProcesados.hash_contrasena = await bcrypt.hash(datosActualizacion.contrasena, 12);
+        delete datosActualizacionProcesados.contrasena;
       }
 
-      // ✅ CORREGIDO: Verificar RUT sin acceder a propiedades de tipos
-      if (actualizarUsuarioDto.rut) {
-        const rutDisponible = await this.validarRutDisponible(
-          actualizarUsuarioDto.rut,
-          id,
-        );
-        if (!rutDisponible) {
-          throw new ConflictException('El RUT ya está en uso');
+      if (datosActualizacion.rol) {
+        const rolEncontrado = await this.prisma.roles.findFirst({
+          where: { 
+            nombre_rol: {
+              equals: datosActualizacion.rol,
+              mode: 'insensitive'
+            }
+          },
+        });
+
+        if (!rolEncontrado) {
+          throw new HttpException(`Rol '${datosActualizacion.rol}' no existe`, HttpStatus.BAD_REQUEST);
         }
-        datosActualizacion.rut = actualizarUsuarioDto.rut;
-      }
 
-      if (
-        actualizarUsuarioDto.correo &&
-        actualizarUsuarioDto.correo !== usuarioExistente.correo
-      ) {
-        const emailDisponible = await this.validarEmailDisponible(
-          actualizarUsuarioDto.correo,
-          id,
-        );
-        if (!emailDisponible) {
-          throw new ConflictException('El email ya está en uso');
-        }
-        datosActualizacion.correo = actualizarUsuarioDto.correo;
-      }
-
-      if (actualizarUsuarioDto.id_departamento) {
-        const departamentoValido = await this.validarCodigoDepartamento(
-          actualizarUsuarioDto.id_departamento,
-        );
-        if (!departamentoValido) {
-          throw new Error('Código de departamento inválido');
-        }
-        datosActualizacion.id_departamento =
-          actualizarUsuarioDto.id_departamento;
-      }
-
-      if (actualizarUsuarioDto.rol) {
-        const idRol = this.convertirRolStringAId(actualizarUsuarioDto.rol);
-        if (idRol) {
-          datosActualizacion.id_rol = idRol;
-        }
-      }
-
-      if (actualizarUsuarioDto.contrasena) {
-        datosActualizacion.hash_contrasena = await bcrypt.hash(
-          actualizarUsuarioDto.contrasena,
-          12,
-        );
+        datosActualizacionProcesados.id_rol = rolEncontrado.id_rol;
+        delete datosActualizacionProcesados.rol;
       }
 
       const usuarioActualizado = await this.prisma.usuarios.update({
         where: { id_usuario: id },
-        data: datosActualizacion,
+        data: datosActualizacionProcesados,
+        include: {
+          departamento: {
+            select: {
+              id_departamento: true,
+              nombre_departamento: true,
+            },
+          },
+          rol: {
+            select: {
+              id_rol: true,
+              nombre_rol: true,
+            },
+          },
+        },
       });
 
-      console.log(`✅ Usuario ${id} actualizado`);
-      return this.transformarUsuarioParaFrontend(usuarioActualizado);
+      const { hash_contrasena, ...usuarioSinContrasena } = usuarioActualizado;
+      return {
+        ...usuarioSinContrasena,
+        id: usuarioActualizado.id_usuario,
+      };
+
     } catch (error) {
-      console.error(`❌ Error al actualizar usuario ${id}:`, error);
-      throw error;
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException('Error interno al actualizar usuario', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  async eliminarUsuario(id: number) {
+  async eliminarUsuario(id: number): Promise<void> {
     try {
-      console.log(`🗑️ Eliminando usuario ${id}`);
-
       const usuario = await this.prisma.usuarios.findUnique({
         where: { id_usuario: id },
       });
 
       if (!usuario) {
-        throw new NotFoundException('Usuario no encontrado');
+        throw new HttpException(`Usuario con ID ${id} no encontrado`, HttpStatus.NOT_FOUND);
+      }
+
+      const ticketsActivos = await this.prisma.tickets.count({
+        where: {
+          asignado_a: id,
+          fecha_resolucion: null,
+        },
+      });
+
+      if (ticketsActivos > 0) {
+        throw new HttpException(
+          `No se puede eliminar: usuario tiene ${ticketsActivos} tickets activos asignados`,
+          HttpStatus.CONFLICT,
+        );
       }
 
       await this.prisma.usuarios.delete({
         where: { id_usuario: id },
       });
 
-      console.log(`✅ Usuario ${id} eliminado`);
     } catch (error) {
-      console.error(`❌ Error al eliminar usuario ${id}:`, error);
-      throw error;
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException('Error interno al eliminar usuario', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  // ============ MÉTODOS DE DEPARTAMENTOS ============
-
-  async obtenerDepartamentos(filtros: FiltrosDepartamento = {}) {
+  async obtenerDepartamentos(filtros?: any) {
     try {
-      console.log('🏢 Obteniendo departamentos');
-
       const departamentos = await this.prisma.departamentos.findMany({
-        orderBy: {
-          id_departamento: 'asc',
+        include: {
+          _count: {
+            select: {
+              usuarios: true,
+              tickets: true,
+            },
+          },
         },
+        orderBy: { nombre_departamento: 'asc' },
       });
 
-      console.log(`✅ Encontrados ${departamentos.length} departamentos`);
-
-      return departamentos.map((dept) => ({
+      return departamentos.map(dept => ({
         id: dept.id_departamento,
-        nombre: this.obtenerNombreDepartamentoPorCodigo(dept.id_departamento),
-        descripcion: this.obtenerDescripcionDepartamento(dept.id_departamento),
-        activo: true,
+        nombre: dept.nombre_departamento,
+        usuarios_activos: dept._count.usuarios,
+        tickets_activos: dept._count.tickets,
       }));
+
     } catch (error) {
-      console.error('❌ Error al obtener departamentos:', error);
-      throw new Error(`Error al obtener departamentos: ${error.message}`);
+      throw new HttpException('Error al obtener departamentos', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   async obtenerDepartamentoPorId(id: number) {
     try {
-      console.log(`🔍 Obteniendo departamento ${id}`);
-
       const departamento = await this.prisma.departamentos.findUnique({
         where: { id_departamento: id },
+        include: {
+          usuarios: {
+            select: {
+              id_usuario: true,
+              primer_nombre: true,
+              primer_apellido: true,
+              correo: true,
+              rol: {
+                select: {
+                  nombre_rol: true,
+                },
+              },
+            },
+          },
+          _count: {
+            select: {
+              tickets: true,
+            },
+          },
+        },
       });
 
-      if (!departamento) {
-        throw new NotFoundException('Departamento no encontrado');
-      }
+      if (!departamento) return null;
 
       return {
         id: departamento.id_departamento,
-        nombre: this.obtenerNombreDepartamentoPorCodigo(
-          departamento.id_departamento,
-        ),
-        descripcion: this.obtenerDescripcionDepartamento(
-          departamento.id_departamento,
-        ),
-        activo: true,
+        nombre: departamento.nombre_departamento,
+        usuarios: departamento.usuarios,
+        tickets_activos: departamento._count.tickets,
       };
+
     } catch (error) {
-      console.error(`❌ Error al obtener departamento ${id}:`, error);
-      throw error;
+      throw new HttpException('Error al obtener departamento', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  // ============ MÉTODOS PÚBLICOS DE VALIDACIÓN ============
-
-  async validarRutDisponible(
-    rut: string,
-    usuarioId?: number,
-  ): Promise<boolean> {
+  async crearDepartamento(datosDepartamento: CrearDepartamentoDto) {
     try {
-      return await this.validarRut(rut, usuarioId);
+      const nombreExistente = await this.prisma.departamentos.findFirst({
+        where: { 
+          nombre_departamento: { 
+            equals: datosDepartamento.nombre,
+            mode: 'insensitive'
+          }
+        },
+      });
+
+      if (nombreExistente) {
+        throw new HttpException('Ya existe un departamento con ese nombre', HttpStatus.CONFLICT);
+      }
+
+      const nuevoDepartamento = await this.prisma.departamentos.create({
+        data: {
+          nombre_departamento: datosDepartamento.nombre,
+        },
+      });
+
+      return {
+        id: nuevoDepartamento.id_departamento,
+        nombre: nuevoDepartamento.nombre_departamento,
+      };
+
     } catch (error) {
-      console.error('❌ Error al validar disponibilidad de RUT:', error);
-      return false;
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException('Error interno al crear departamento', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  async validarEmailDisponible(
-    email: string,
-    usuarioId?: number,
-  ): Promise<boolean> {
+  async obtenerEstadisticasGenerales() {
     try {
-      return await this.validarEmail(email, usuarioId);
-    } catch (error) {
-      console.error('❌ Error al validar disponibilidad de email:', error);
-      return false;
-    }
-  }
-
-  // ============ MÉTODOS PÚBLICOS DE MÉTRICAS ============
-
-  async obtenerResumenEmpresa() {
-    try {
-      const [totalUsuarios, totalDepartamentos] = await Promise.all([
-        this.contarUsuariosActivos(),
-        this.contarDepartamentos(),
+      const [
+        totalUsuarios,
+        totalDepartamentos,
+        totalTickets,
+        ticketsPendientes,
+        ticketsCerrados,
+      ] = await Promise.all([
+        this.prisma.usuarios.count(),
+        this.prisma.departamentos.count(),
+        this.prisma.tickets.count(),
+        this.prisma.tickets.count({ where: { fecha_resolucion: null } }),
+        this.prisma.tickets.count({ where: { fecha_resolucion: { not: null } } }),
       ]);
 
       return {
-        totalUsuarios,
-        totalDepartamentos,
-        fechaActualizacion: new Date().toISOString(),
-      };
-    } catch (error) {
-      console.error('❌ Error al obtener resumen:', error);
-      throw error;
-    }
-  }
-
-  async obtenerMetricasDepartamento(idDepartamento: number) {
-    try {
-      console.log(`📊 Calculando métricas del departamento ${idDepartamento}`);
-
-      const usuarios = await this.prisma.usuarios.findMany({
-        where: { id_departamento: idDepartamento },
-      });
-
-      const metricas = {
-        departamento: {
-          id: idDepartamento,
-          nombre: this.obtenerNombreDepartamentoPorCodigo(idDepartamento),
-          descripcion: this.obtenerDescripcionDepartamento(idDepartamento),
-        },
         usuarios: {
-          total: usuarios.length,
-          activos: usuarios.length,
-          porRol: this.agruparUsuariosPorRol(usuarios),
+          total: totalUsuarios,
         },
+        departamentos: {
+          total: totalDepartamentos,
+        },
+        tickets: {
+          total: totalTickets,
+          pendientes: ticketsPendientes,
+          cerrados: ticketsCerrados,
+        },
+        metricas: {
+          porcentaje_tickets_cerrados: totalTickets > 0 ? Math.round((ticketsCerrados / totalTickets) * 100) : 0,
+        },
+        timestamp: new Date().toISOString(),
       };
 
-      return metricas;
     } catch (error) {
-      console.error(
-        `❌ Error al obtener métricas del departamento ${idDepartamento}:`,
-        error,
-      );
-      throw error;
-    }
-  }
-
-  async obtenerMetricasDepartamentos() {
-    try {
-      const departamentos = [1, 2, 3, 4];
-      const metricas = await Promise.all(
-        departamentos.map((id) => this.obtenerMetricasDepartamento(id)),
-      );
-
-      return metricas;
-    } catch (error) {
-      console.error('❌ Error al obtener métricas de departamentos:', error);
-      throw error;
-    }
-  }
-
-  async obtenerTendenciaMensual(
-    meses: number = 6,
-  ): Promise<TendenciaMensual[]> {
-    try {
-      const tendencia: TendenciaMensual[] = []; // ✅ CORREGIDO: Tipado explícito
-
-      for (let i = meses; i >= 0; i--) {
-        const fecha = new Date();
-        fecha.setMonth(fecha.getMonth() - i);
-
-        tendencia.push({
-          mes: fecha.toISOString().substring(0, 7),
-          usuarios: Math.floor(Math.random() * 10) + 1,
-        });
-      }
-
-      return tendencia;
-    } catch (error) {
-      console.error('❌ Error al obtener tendencia mensual:', error);
-      throw error;
+      throw new HttpException('Error al calcular estadísticas', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
   async obtenerTicketsPorEstado() {
     try {
-      return {
-        abiertos: 5,
-        enProceso: 8,
-        cerrados: 12,
-        pendientes: 3,
+      const distribucion = await this.prisma.tickets.groupBy({
+        by: ['id_estado'],
+        _count: { id_ticket: true },
+        orderBy: { _count: { id_ticket: 'desc' } },
+      });
+
+      const estados = await this.prisma.estados_ticket.findMany({
+        select: { id_estado: true, nombre_estado: true },
+      });
+
+      const mapaEstados = new Map(estados.map(estado => [estado.id_estado, estado.nombre_estado]));
+
+      const distribucionFormateada = distribucion.map(item => ({
+        estado_id: item.id_estado,
+        estado_nombre: mapaEstados.get(item.id_estado) || 'Estado desconocido',
+        cantidad: item._count.id_ticket,
+        porcentaje: 0,
+      }));
+
+      const totalTickets = distribucionFormateada.reduce((acc, item) => acc + item.cantidad, 0);
+      
+      if (totalTickets > 0) {
+        distribucionFormateada.forEach(item => {
+          item.porcentaje = Math.round((item.cantidad / totalTickets) * 100);
+        });
+      }
+
+      return distribucionFormateada;
+
+    } catch (error) {
+      throw new HttpException('Error al obtener distribución por estado', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async obtenerTicketsPorPrioridad() {
+    try {
+      const distribucion = await this.prisma.tickets.groupBy({
+        by: ['id_prioridad'],
+        _count: { id_ticket: true },
+        orderBy: { _count: { id_ticket: 'desc' } },
+      });
+
+      const prioridades = await this.prisma.prioridades.findMany({
+        select: { id_prioridad: true, nombre_prioridad: true, nivel: true },
+        orderBy: { nivel: 'asc' },
+      });
+
+      const mapaPrioridades = new Map(prioridades.map(prioridad => [prioridad.id_prioridad, prioridad.nombre_prioridad]));
+
+      const distribucionFormateada = distribucion.map(item => ({
+        prioridad_id: item.id_prioridad,
+        prioridad_nombre: mapaPrioridades.get(item.id_prioridad) || 'Prioridad desconocida',
+        cantidad: item._count.id_ticket,
+        porcentaje: 0,
+      }));
+
+      const totalTickets = distribucionFormateada.reduce((acc, item) => acc + item.cantidad, 0);
+      
+      if (totalTickets > 0) {
+        distribucionFormateada.forEach(item => {
+          item.porcentaje = Math.round((item.cantidad / totalTickets) * 100);
+        });
+      }
+
+      return distribucionFormateada;
+
+    } catch (error) {
+      throw new HttpException('Error al obtener distribución por prioridad', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async obtenerTicketsPorDepartamento() {
+    try {
+      const distribucion = await this.prisma.tickets.groupBy({
+        by: ['id_departamento'],
+        _count: { id_ticket: true },
+        orderBy: { _count: { id_ticket: 'desc' } },
+      });
+
+      const departamentos = await this.prisma.departamentos.findMany({
+        select: { id_departamento: true, nombre_departamento: true },
+      });
+
+      const mapaDepartamentos = new Map(departamentos.map(dept => [dept.id_departamento, dept.nombre_departamento]));
+
+      const distribucionFormateada = distribucion.map(item => ({
+        departamento_id: item.id_departamento,
+        departamento_nombre: mapaDepartamentos.get(item.id_departamento) || 'Sin departamento',
+        cantidad: item._count.id_ticket,
+        porcentaje: 0,
+      }));
+
+      const totalTickets = distribucionFormateada.reduce((acc, item) => acc + item.cantidad, 0);
+      
+      if (totalTickets > 0) {
+        distribucionFormateada.forEach(item => {
+          item.porcentaje = Math.round((item.cantidad / totalTickets) * 100);
+        });
+      }
+
+      return distribucionFormateada;
+
+    } catch (error) {
+      throw new HttpException('Error al obtener distribución por departamento', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async obtenerTicketsResueltos(fechaInicio?: string, fechaFin?: string) {
+    try {
+      const filtrosFecha: any = {
+        fecha_resolucion: { not: null },
       };
-    } catch (error) {
-      console.error('❌ Error al obtener tickets por estado:', error);
-      throw error;
-    }
-  }
 
-  // ============ MÉTODOS PRIVADOS ============
-
-  private async transformarUsuarioParaFrontend(usuario: any) {
-    const nombreDepartamento = usuario.id_departamento
-      ? this.obtenerNombreDepartamentoPorCodigo(usuario.id_departamento)
-      : 'Sin Departamento';
-
-    const rolString = this.convertirIdRolAString(usuario.id_rol);
-
-    return {
-      id: usuario.id_usuario,
-      nombre:
-        `${usuario.primer_nombre} ${usuario.segundo_nombre || ''} ${usuario.primer_apellido} ${usuario.segundo_apellido}`.trim(),
-      email: usuario.correo,
-      rut: usuario.rut || 'Sin RUT', // ✅ CORREGIDO: Valor por defecto
-      id_departamento: usuario.id_departamento || 0,
-      nombre_departamento: nombreDepartamento,
-      rol: rolString,
-      fecha_creacion: usuario.fecha_creacion?.toISOString(),
-      ultimo_acceso: usuario.ultimo_acceso?.toISOString(),
-    };
-  }
-
-  private async validarCodigoDepartamento(
-    codigoDepartamento: number,
-  ): Promise<boolean> {
-    const codigosValidos = [1, 2, 3, 4];
-    return codigosValidos.includes(codigoDepartamento);
-  }
-
-  private obtenerNombreDepartamentoPorCodigo(codigo: number): string {
-    const mapeoNombres = {
-      1: 'Administración',
-      2: 'Comercial',
-      3: 'Informática',
-      4: 'Operaciones',
-    };
-    return mapeoNombres[codigo] || `Departamento ${codigo}`;
-  }
-
-  private obtenerDescripcionDepartamento(codigo: number): string {
-    const mapeoDescripciones = {
-      1: 'Gestión administrativa y recursos humanos',
-      2: 'Ventas, marketing y atención comercial',
-      3: 'Desarrollo, infraestructura y soporte técnico',
-      4: 'Logística, producción y operaciones',
-    };
-    return mapeoDescripciones[codigo] || '';
-  }
-
-  public async validarEmail(
-    email: string,
-    usuarioId?: number,
-  ): Promise<boolean> {
-    try {
-      const whereClause: any = { correo: email };
-
-      if (usuarioId) {
-        whereClause.NOT = { id_usuario: usuarioId };
+      if (fechaInicio || fechaFin) {
+        if (fechaInicio) {
+          filtrosFecha.fecha_resolucion.gte = new Date(fechaInicio);
+        }
+        
+        if (fechaFin) {
+          const fechaFinAjustada = new Date(fechaFin);
+          fechaFinAjustada.setHours(23, 59, 59, 999);
+          filtrosFecha.fecha_resolucion.lte = fechaFinAjustada;
+        }
       }
 
-      const usuario = await this.prisma.usuarios.findFirst({
-        where: whereClause,
+      const ticketsResueltos = await this.prisma.tickets.findMany({
+        where: filtrosFecha,
+        include: {
+          solicitante: {
+            select: {
+              id_usuario: true,
+              primer_nombre: true,
+              primer_apellido: true,
+              correo: true,
+            },
+          },
+          responsable: {
+            select: {
+              id_usuario: true,
+              primer_nombre: true,
+              primer_apellido: true,
+              correo: true,
+            },
+          },
+          departamento: {
+            select: {
+              id_departamento: true,
+              nombre_departamento: true,
+            },
+          },
+        },
+        orderBy: { fecha_resolucion: 'desc' },
       });
 
-      return !usuario;
+      return ticketsResueltos.map(ticket => ({
+        id: ticket.id_ticket,
+        numero_ticket: ticket.numero_ticket,
+        asunto: ticket.asunto,
+        descripcion: ticket.descripcion,
+        fecha_creacion: ticket.fecha_creacion,
+        fecha_resolucion: ticket.fecha_resolucion,
+        tiempo_resolucion_horas: ticket.fecha_resolucion && ticket.fecha_creacion ? 
+          Math.round((ticket.fecha_resolucion.getTime() - ticket.fecha_creacion.getTime()) / (1000 * 60 * 60)) : 0,
+        solicitante: ticket.solicitante,
+        responsable: ticket.responsable,
+        departamento: ticket.departamento,
+      }));
+
     } catch (error) {
-      console.error('❌ Error al validar email:', error);
-      return false;
+      throw new HttpException('Error al obtener tickets resueltos', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  public async validarRut(rut: string, usuarioId?: number): Promise<boolean> {
+  async obtenerRendimientoTecnicos(fechaInicio?: string, fechaFin?: string) {
     try {
-      const whereClause: any = { rut: rut };
-
-      if (usuarioId) {
-        whereClause.NOT = { id_usuario: usuarioId };
+      let filtrosFecha = {};
+      if (fechaInicio || fechaFin) {
+        filtrosFecha = { fecha_creacion: {} };
+        
+        if (fechaInicio) {
+          filtrosFecha['fecha_creacion']['gte'] = new Date(fechaInicio);
+        }
+        
+        if (fechaFin) {
+          const fechaFinAjustada = new Date(fechaFin);
+          fechaFinAjustada.setHours(23, 59, 59, 999);
+          filtrosFecha['fecha_creacion']['lte'] = fechaFinAjustada;
+        }
       }
 
-      const usuario = await this.prisma.usuarios.findFirst({
-        where: whereClause,
+      const rolTecnico = await this.prisma.roles.findFirst({
+        where: { 
+          nombre_rol: { equals: 'tecnico', mode: 'insensitive' }
+        },
       });
 
-      return !usuario;
+      if (!rolTecnico) {
+        throw new HttpException('Rol técnico no encontrado en el sistema', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+
+      const tecnicos = await this.prisma.usuarios.findMany({
+        where: { id_rol: rolTecnico.id_rol },
+        include: {
+          departamento: {
+            select: { nombre_departamento: true },
+          },
+        },
+      });
+
+      const reporteRendimiento = [];
+
+      for (const tecnico of tecnicos) {
+        const [ticketsAsignados, ticketsResueltos, ticketsPendientes] = await Promise.all([
+          this.prisma.tickets.count({
+            where: { asignado_a: tecnico.id_usuario, ...filtrosFecha },
+          }),
+          this.prisma.tickets.count({
+            where: { asignado_a: tecnico.id_usuario, fecha_resolucion: { not: null }, ...filtrosFecha },
+          }),
+          this.prisma.tickets.count({
+            where: { asignado_a: tecnico.id_usuario, fecha_resolucion: null },
+          }),
+        ]);
+
+        const ticketsConTiempos = await this.prisma.tickets.findMany({
+          where: { asignado_a: tecnico.id_usuario, fecha_resolucion: { not: null }, ...filtrosFecha },
+          select: { fecha_creacion: true, fecha_resolucion: true },
+        });
+
+        let tiempoPromedioResolucion = 0;
+        if (ticketsConTiempos.length > 0) {
+          const totalTiempo = ticketsConTiempos.reduce((acc, ticket) => {
+            if (ticket.fecha_resolucion && ticket.fecha_creacion) {
+              const diferencia = ticket.fecha_resolucion.getTime() - ticket.fecha_creacion.getTime();
+              return acc + diferencia;
+            }
+            return acc;
+          }, 0);
+
+          tiempoPromedioResolucion = Math.round(totalTiempo / ticketsConTiempos.length / (1000 * 60 * 60));
+        }
+
+        const eficiencia = ticketsAsignados > 0 ? Math.round((ticketsResueltos / ticketsAsignados) * 100) : 0;
+
+        reporteRendimiento.push({
+          tecnico_id: tecnico.id_usuario,
+          nombre_completo: `${tecnico.primer_nombre} ${tecnico.primer_apellido}`,
+          correo: tecnico.correo,
+          departamento: tecnico.departamento?.nombre_departamento || 'Sin departamento',
+          tickets_asignados: ticketsAsignados,
+          tickets_resueltos: ticketsResueltos,
+          tickets_pendientes: ticketsPendientes,
+          tiempo_promedio_resolucion_horas: tiempoPromedioResolucion,
+          eficiencia_porcentaje: eficiencia,
+        });
+      }
+
+      return reporteRendimiento.sort((a, b) => b.eficiencia_porcentaje - a.eficiencia_porcentaje);
+
     } catch (error) {
-      console.error('❌ Error al validar RUT:', error);
-      return false;
+      throw new HttpException('Error al generar reporte de rendimiento', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  private convertirRolStringAId(rolString: string): number | null {
-    const mapeoRoles = {
-      administrador: 1,
-      responsable: 2,
-      usuario_interno: 3,
-      usuario_externo: 4,
-    };
+  async obtenerTiempoPromedioResolucion() {
+    try {
+      const departamentos = await this.prisma.departamentos.findMany({
+        select: { id_departamento: true, nombre_departamento: true },
+      });
 
-    return mapeoRoles[rolString] || null;
-  }
+      const metricas = [];
 
-  private convertirIdRolAString(idRol: number): string {
-    const mapeoIds = {
-      1: 'administrador',
-      2: 'responsable',
-      3: 'usuario_interno',
-      4: 'usuario_externo',
-    };
+      for (const departamento of departamentos) {
+        const fechaHace90Dias = new Date();
+        fechaHace90Dias.setDate(fechaHace90Dias.getDate() - 90);
 
-    return mapeoIds[idRol] || 'usuario_interno';
-  }
+        const ticketsResueltos = await this.prisma.tickets.findMany({
+          where: {
+            id_departamento: departamento.id_departamento,
+            fecha_resolucion: { not: null, gte: fechaHace90Dias },
+          },
+        });
 
-  private mapearCampoOrdenamiento(campo: string): string {
-    const mapeo = {
-      nombre: 'primer_nombre',
-      email: 'correo',
-      fecha_creacion: 'fecha_creacion',
-      ultimo_acceso: 'ultimo_acceso',
-    };
+        if (ticketsResueltos.length === 0) {
+          metricas.push({
+            departamento_id: departamento.id_departamento,
+            departamento_nombre: departamento.nombre_departamento,
+            total_tickets: 0,
+            tiempo_promedio_horas: 0,
+          });
+          continue;
+        }
 
-    return mapeo[campo] || 'fecha_creacion';
-  }
+        const totalTiempo = ticketsResueltos.reduce((acc, ticket) => {
+          if (ticket.fecha_resolucion && ticket.fecha_creacion) {
+            const diferencia = ticket.fecha_resolucion.getTime() - ticket.fecha_creacion.getTime();
+            return acc + diferencia;
+          }
+          return acc;
+        }, 0);
 
-  private async contarUsuariosActivos(): Promise<number> {
-    return await this.prisma.usuarios.count();
-  }
+        const tiempoPromedioGeneral = Math.round(totalTiempo / ticketsResueltos.length / (1000 * 60 * 60));
 
-  private async contarDepartamentos(): Promise<number> {
-    return await this.prisma.departamentos.count();
-  }
-
-  private async obtenerUsuariosPorDepartamento(): Promise<
-    Record<string, number>
-  > {
-    const resultado = await this.prisma.usuarios.groupBy({
-      by: ['id_departamento'],
-      _count: {
-        id_usuario: true,
-      },
-    });
-
-    const usuariosPorDepartamento: Record<string, number> = {};
-
-    resultado.forEach((grupo) => {
-      // ✅ CORREGIDO: Validar null antes de usar
-      if (
-        grupo.id_departamento !== null &&
-        grupo.id_departamento !== undefined
-      ) {
-        const nombreDepartamento = this.obtenerNombreDepartamentoPorCodigo(
-          grupo.id_departamento,
-        );
-        usuariosPorDepartamento[nombreDepartamento] = grupo._count.id_usuario;
+        metricas.push({
+          departamento_id: departamento.id_departamento,
+          departamento_nombre: departamento.nombre_departamento,
+          total_tickets: ticketsResueltos.length,
+          tiempo_promedio_horas: tiempoPromedioGeneral,
+        });
       }
-    });
 
-    return usuariosPorDepartamento;
+      return metricas.sort((a, b) => a.tiempo_promedio_horas - b.tiempo_promedio_horas);
+
+    } catch (error) {
+      throw new HttpException('Error al calcular métricas de tiempo', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
-  private async obtenerUsuariosPorRol(): Promise<Record<string, number>> {
-    const resultado = await this.prisma.usuarios.groupBy({
-      by: ['id_rol'],
-      _count: {
-        id_usuario: true,
-      },
-    });
+  async validarEmail(email: string, usuarioId?: number) {
+    try {
+      const usuario = await this.prisma.usuarios.findUnique({
+        where: { correo: email },
+      });
 
-    const usuariosPorRol: Record<string, number> = {};
+      if (!usuario) return true;
+      
+      return usuarioId ? usuario.id_usuario === usuarioId : false;
 
-    resultado.forEach((grupo) => {
-      const nombreRol = this.convertirIdRolAString(grupo.id_rol);
-      usuariosPorRol[nombreRol] = grupo._count.id_usuario;
-    });
-
-    return usuariosPorRol;
+    } catch (error) {
+      throw new HttpException('Error al validar email', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
-  private agruparUsuariosPorRol(usuarios: any[]): Record<string, number> {
-    const grupos: Record<string, number> = {};
+  async validarRut(rut: string, usuarioId?: number) {
+    try {
+      const usuario = await this.prisma.usuarios.findUnique({
+        where: { rut: rut },
+      });
 
-    usuarios.forEach((usuario) => {
-      const rol = this.convertirIdRolAString(usuario.id_rol);
-      grupos[rol] = (grupos[rol] || 0) + 1;
-    });
+      if (!usuario) return true;
+      
+      return usuarioId ? usuario.id_usuario === usuarioId : false;
 
-    return grupos;
+    } catch (error) {
+      throw new HttpException('Error al validar RUT', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async obtenerResumenEmpresa() {
+    try {
+      const [usuarios, departamentos, tickets] = await Promise.all([
+        this.prisma.usuarios.count(),
+        this.prisma.departamentos.count(),
+        this.prisma.tickets.count(),
+      ]);
+
+      return {
+        total_usuarios: usuarios,
+        total_departamentos: departamentos,
+        total_tickets: tickets,
+        timestamp: new Date().toISOString(),
+      };
+
+    } catch (error) {
+      throw new HttpException('Error al obtener resumen', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async obtenerMetricasDepartamentos() {
+    try {
+      const departamentos = await this.prisma.departamentos.findMany({
+        include: {
+          _count: {
+            select: {
+              usuarios: true,
+              tickets: true,
+            },
+          },
+        },
+      });
+
+      return departamentos.map(dept => ({
+        id: dept.id_departamento,
+        nombre: dept.nombre_departamento,
+        total_usuarios: dept._count.usuarios,
+        tickets_activos: dept._count.tickets,
+      }));
+
+    } catch (error) {
+      throw new HttpException('Error al obtener métricas de departamentos', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async obtenerMetricasDepartamento(id: number) {
+    try {
+      const departamento = await this.prisma.departamentos.findUnique({
+        where: { id_departamento: id },
+        include: {
+          _count: {
+            select: {
+              usuarios: true,
+              tickets: true,
+            },
+          },
+        },
+      });
+
+      if (!departamento) return null;
+
+      return {
+        id: departamento.id_departamento,
+        nombre: departamento.nombre_departamento,
+        total_usuarios: departamento._count.usuarios,
+        tickets_activos: departamento._count.tickets,
+      };
+
+    } catch (error) {
+      throw new HttpException('Error al obtener métricas del departamento', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async obtenerTendenciaMensual(meses: number = 12) {
+    try {
+      const fechaHaceMeses = new Date();
+      fechaHaceMeses.setMonth(fechaHaceMeses.getMonth() - meses);
+
+      const tickets = await this.prisma.tickets.findMany({
+        where: {
+          fecha_creacion: {
+            gte: fechaHaceMeses,
+          },
+        },
+        select: {
+          fecha_creacion: true,
+          fecha_resolucion: true,
+        },
+      });
+
+      const tendenciaPorMes = new Map();
+
+      tickets.forEach(ticket => {
+        if (ticket.fecha_creacion) {
+          const mesAno = `${ticket.fecha_creacion.getFullYear()}-${String(ticket.fecha_creacion.getMonth() + 1).padStart(2, '0')}`;
+          
+          if (!tendenciaPorMes.has(mesAno)) {
+            tendenciaPorMes.set(mesAno, {
+              mes: mesAno,
+              creados: 0,
+              resueltos: 0,
+            });
+          }
+
+          const stats = tendenciaPorMes.get(mesAno);
+          stats.creados++;
+
+          if (ticket.fecha_resolucion) {
+            stats.resueltos++;
+          }
+        }
+      });
+
+      return Array.from(tendenciaPorMes.values()).sort((a, b) => a.mes.localeCompare(b.mes));
+
+    } catch (error) {
+      throw new HttpException('Error al obtener tendencia mensual', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }

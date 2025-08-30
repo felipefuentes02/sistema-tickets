@@ -25,8 +25,6 @@ import { ActualizarUsuarioDto } from '../dto/actualizar-usuario.dto';
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  // ============ ENDPOINTS DE USUARIOS ============
-
   /**
    * Obtiene la lista de todos los usuarios
    * GET /api/admin/usuarios
